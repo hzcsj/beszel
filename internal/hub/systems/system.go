@@ -238,6 +238,12 @@ func (sys *System) createRecords(data *system.CombinedData) (*core.Record, error
 			}
 		}
 
+		// derive VPS traffic info from stats.ni before saving info
+		if sys.manager.trafficManager != nil && data.Stats.NetworkInterfaces != nil {
+			systemName := systemRecord.GetString("name")
+			data.Info.VPSTraffic = sys.manager.trafficManager.DeriveTraffic(sys.Id, systemName, data.Stats.NetworkInterfaces)
+		}
+
 		// update system record (do this last because it triggers alerts and we need above records to be inserted first)
 		systemRecord.Set("status", up)
 		systemRecord.Set("info", data.Info)

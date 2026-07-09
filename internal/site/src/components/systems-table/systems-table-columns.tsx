@@ -6,6 +6,7 @@ import { getPagePath } from "@nanostores/router"
 import type { CellContext, ColumnDef, HeaderContext } from "@tanstack/react-table"
 import type { ClassValue } from "clsx"
 import {
+	ArrowDownUpIcon,
 	ArrowUpDownIcon,
 	ChevronRightSquareIcon,
 	ClockArrowUp,
@@ -257,6 +258,65 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 					<span className="tabular-nums whitespace-nowrap">
 						{decimalString(value, value >= 100 ? 1 : 2)} {unit}
 					</span>
+				)
+			},
+		},
+		{
+			accessorFn: ({ info }) => (info.vt ? (info.vt.bill ?? 0) : undefined),
+			id: "traffic",
+			name: () => t`Traffic`,
+			size: 0,
+			Icon: ArrowDownUpIcon,
+			header: sortableHeader,
+			sortUndefined: "last",
+			cell(info) {
+				const vt = info.row.original.info.vt
+				if (!vt) {
+					return null
+				}
+				const rx = formatBytes(vt.crx ?? 0)
+				const tx = formatBytes(vt.ctx ?? 0)
+
+				const quotaPct = vt.quota ? ((vt.bill ?? 0) / vt.quota) * 100 : 0
+				const projPct = vt.quota ? ((vt.proj ?? 0) / vt.quota) * 100 : 0
+				const warnClass = quotaPct >= 90 ? "text-red-500" : quotaPct >= 80 || projPct > 100 ? "text-yellow-500" : ""
+
+				const tooltipLines: string[] = []
+				if (vt.cs) tooltipLines.push(`Cycle: ${vt.cs}`)
+				if (vt.rd) tooltipLines.push(`Reset day: ${vt.rd}`)
+				if (vt.dl !== undefined) tooltipLines.push(`Days left: ${vt.dl}`)
+				tooltipLines.push(`Cycle ↓${decimalString(rx.value, 2)} ${rx.unit} / ↑${decimalString(tx.value, 2)} ${tx.unit}`)
+				const trx = formatBytes(vt.trx ?? 0)
+				const ttx = formatBytes(vt.ttx ?? 0)
+				tooltipLines.push(
+					`Total ↓${decimalString(trx.value, 2)} ${trx.unit} / ↑${decimalString(ttx.value, 2)} ${ttx.unit}`
+				)
+				if (vt.quota) {
+					const q = formatBytes(vt.quota)
+					tooltipLines.push(`Quota: ${decimalString(q.value, 2)} ${q.unit} (${decimalString(quotaPct, 1)}%)`)
+				}
+				if (vt.proj) {
+					const p = formatBytes(vt.proj)
+					tooltipLines.push(`Projected: ${decimalString(p.value, 2)} ${p.unit}`)
+				}
+				if (vt.mode) tooltipLines.push(`Mode: ${vt.mode}`)
+
+				return (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<span className={cn("tabular-nums whitespace-nowrap", warnClass)}>
+								↓{decimalString(rx.value, rx.value >= 100 ? 1 : 2)} {rx.unit} | ↑
+								{decimalString(tx.value, tx.value >= 100 ? 1 : 2)} {tx.unit}
+							</span>
+						</TooltipTrigger>
+						<TooltipContent side="bottom" className="max-w-xs">
+							<div className="grid gap-0.5 text-xs">
+								{tooltipLines.map((line, i) => (
+									<span key={i}>{line}</span>
+								))}
+							</div>
+						</TooltipContent>
+					</Tooltip>
 				)
 			},
 		},

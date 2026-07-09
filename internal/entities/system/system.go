@@ -155,6 +155,22 @@ type Info struct {
 	ExtraFsPct     map[string]float64 `json:"efs,omitempty" cbor:"21,keyasint,omitempty"`
 	Services       []uint16           `json:"sv,omitempty" cbor:"22,keyasint,omitempty"` // [totalServices, numFailedServices]
 	Battery        [2]uint8           `json:"bat,omitzero" cbor:"23,keyasint,omitzero"`  // [percent, charge state]
+	VPSTraffic     *VPSTrafficInfo    `json:"vt,omitempty" cbor:"24,keyasint,omitempty"`
+}
+
+type VPSTrafficInfo struct {
+	ResetDay       uint8  `json:"rd,omitempty" cbor:"0,keyasint,omitempty"`
+	CycleStart     string `json:"cs,omitempty" cbor:"1,keyasint,omitempty"`
+	DaysLeft       int    `json:"dl,omitempty" cbor:"2,keyasint,omitempty"`
+	CycleRxBytes   uint64 `json:"crx,omitempty" cbor:"3,keyasint,omitempty"`
+	CycleTxBytes   uint64 `json:"ctx,omitempty" cbor:"4,keyasint,omitempty"`
+	TotalRxBytes   uint64 `json:"trx,omitempty" cbor:"5,keyasint,omitempty"`
+	TotalTxBytes   uint64 `json:"ttx,omitempty" cbor:"6,keyasint,omitempty"`
+	QuotaBytes     uint64 `json:"quota,omitempty" cbor:"7,keyasint,omitempty"`
+	BillableBytes  uint64 `json:"bill,omitempty" cbor:"8,keyasint,omitempty"`
+	ProjectedBytes uint64 `json:"proj,omitempty" cbor:"9,keyasint,omitempty"`
+	BillingMode    string `json:"mode,omitempty" cbor:"10,keyasint,omitempty"`
+	UpdatedUnix    int64  `json:"ts,omitempty" cbor:"11,keyasint,omitempty"`
 }
 
 // Data that does not change during process lifetime and is not needed in All Systems table

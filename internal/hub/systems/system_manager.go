@@ -41,10 +41,11 @@ var errSystemExists = errors.New("system exists")
 // SystemManager manages a collection of monitored systems and their connections.
 // It handles system lifecycle, status updates, and maintains both SSH and WebSocket connections.
 type SystemManager struct {
-	hub           hubLike                               // Hub interface for database and alert operations
-	systems       *store.Store[string, *System]         // Thread-safe store of active systems
-	sshConfig     *ssh.ClientConfig                     // SSH client configuration for system connections
-	smartFetchMap *expirymap.ExpiryMap[smartFetchState] // Stores last SMART fetch time/result; TTL is only for cleanup
+	hub            hubLike                               // Hub interface for database and alert operations
+	systems        *store.Store[string, *System]         // Thread-safe store of active systems
+	sshConfig      *ssh.ClientConfig                     // SSH client configuration for system connections
+	smartFetchMap  *expirymap.ExpiryMap[smartFetchState] // Stores last SMART fetch time/result; TTL is only for cleanup
+	trafficManager *VPSTrafficManager                    // VPS traffic billing cycle tracker
 }
 
 // hubLike defines the interface requirements for the hub dependency.
@@ -61,9 +62,10 @@ type hubLike interface {
 // The hub must implement the hubLike interface to provide database and alert functionality.
 func NewSystemManager(hub hubLike) *SystemManager {
 	return &SystemManager{
-		systems:       store.New(map[string]*System{}),
-		hub:           hub,
-		smartFetchMap: expirymap.New[smartFetchState](time.Hour),
+		systems:        store.New(map[string]*System{}),
+		hub:            hub,
+		smartFetchMap:  expirymap.New[smartFetchState](time.Hour),
+		trafficManager: NewVPSTrafficManager(hub.DataDir()),
 	}
 }
 

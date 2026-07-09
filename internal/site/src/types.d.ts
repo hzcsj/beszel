@@ -78,6 +78,35 @@ export interface SystemInfo {
 	efs?: Record<string, number>
 	/** services [totalServices, numFailedServices] */
 	sv?: [number, number]
+	/** VPS traffic billing cycle info (hub-derived) */
+	vt?: VPSTrafficInfo
+}
+
+export interface VPSTrafficInfo {
+	/** reset day of billing cycle (1-28) */
+	rd?: number
+	/** cycle start date YYYY-MM-DD */
+	cs?: string
+	/** days left in cycle */
+	dl?: number
+	/** current cycle download bytes */
+	crx?: number
+	/** current cycle upload bytes */
+	ctx?: number
+	/** historical total download bytes */
+	trx?: number
+	/** historical total upload bytes */
+	ttx?: number
+	/** quota bytes */
+	quota?: number
+	/** billable bytes (per billing mode) */
+	bill?: number
+	/** projected bytes to end of cycle */
+	proj?: number
+	/** billing mode */
+	mode?: string
+	/** last update unix timestamp */
+	ts?: number
 }
 
 export interface SystemStats {

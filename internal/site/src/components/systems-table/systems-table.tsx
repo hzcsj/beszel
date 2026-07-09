@@ -69,7 +69,12 @@ export default function SystemsTable() {
 		sessionStorage
 	)
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-	const [columnVisibility, setColumnVisibility] = useBrowserStorage<VisibilityState>("cols", {})
+	const [columnVisibility, setColumnVisibility] = useBrowserStorage<VisibilityState>("cols", {
+		gpu: false,
+		temp: false,
+		battery: false,
+		services: false,
+	})
 
 	const locale = i18n.locale
 
