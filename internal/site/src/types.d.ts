@@ -118,6 +118,8 @@ export interface VPSProbeTargetStats {
 	loss1?: number
 	/** 1-minute sample count (>0 means loss1 is valid) */
 	n1?: number
+	/** hub is on the same node as the agent */
+	local?: boolean
 }
 
 export interface VPSTrafficInfo {

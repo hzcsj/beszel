@@ -339,6 +339,7 @@ func buildListSummary(systemID string, data *system.CombinedData) SystemListSumm
 				Updated:            v.Updated,
 				Target:             v.Target,
 				LatencyAvgWindowMs: v.LatencyAvgWindowMs,
+				Local:              v.Local,
 			}
 		}
 		info.VPSProbe = stripped

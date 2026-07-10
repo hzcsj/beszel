@@ -187,6 +187,7 @@ type VPSProbeTargetStats struct {
 	LatencyAvgWindowMs float64 `json:"latw,omitempty" cbor:"7,keyasint,omitempty"`
 	LossPct1m          float64 `json:"loss1,omitempty" cbor:"8,keyasint,omitempty"`
 	Samples1m          uint16  `json:"n1,omitempty" cbor:"9,keyasint,omitempty"`
+	Local              bool    `json:"local,omitempty" cbor:"10,keyasint,omitempty"`
 }
 
 // VPSProbeStats holds probe results keyed by canonical target name (hub, ct, cu, cm).

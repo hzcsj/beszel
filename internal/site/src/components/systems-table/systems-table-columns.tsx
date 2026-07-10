@@ -429,7 +429,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 				let worstLat = 0
 				for (const key of ["hub", "ct", "cu", "cm"]) {
 					const p = vp[key]
-					if (!p) continue
+					if (!p || p.local) continue
 					if ((p.loss ?? 0) > worstLoss) worstLoss = p.loss ?? 0
 					const lat = p.latw ?? p.lat1 ?? p.lat ?? 0
 					if (lat > worstLat) worstLat = lat
@@ -450,19 +450,25 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 
 				const parts = targets.map((key) => {
 					const p = vp[key]
-					if (!p) return { key, latStr: "--", muted: true, warn: false, crit: false }
+					if (!p) return { key, latStr: "--", muted: true, warn: false, crit: false, local: false }
+					if (p.local) return { key, latStr: t`Local`, muted: true, warn: false, crit: false, local: true }
 					const lat = p.latw ?? p.lat1 ?? p.lat
 					const latStr = lat != null && lat > 0 ? `${Math.round(lat)}` : "--"
 					const loss = p.loss ?? 0
 					const crit = loss >= 20
 					const warn = !crit && loss >= 5
-					return { key, latStr, muted: false, warn, crit }
+					return { key, latStr, muted: false, warn, crit, local: false }
 				})
 
 				const tooltipLines: string[] = []
 				for (const key of targets) {
 					const p = vp[key]
 					if (!p) continue
+					if (p.local) {
+						tooltipLines.push(`${labels[key]}: ${t`Local`}`)
+						if (p.target) tooltipLines.push(`  ${p.target}`)
+						continue
+					}
 					const status = p.ok ? t`Reachable` : t`Unreachable`
 					const windowLat = p.latw ?? p.lat1 ?? p.lat
 					const latStr = windowLat != null && windowLat > 0 ? `${Math.round(windowLat)}ms` : "--"

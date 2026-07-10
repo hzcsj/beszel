@@ -16,6 +16,7 @@ import (
 
 type VPSProbeConfig struct {
 	Enabled         *bool             `json:"enabled,omitempty"`
+	HubLocal        bool              `json:"hubLocal"`
 	IntervalSeconds int               `json:"intervalSeconds"`
 	TimeoutMs       int               `json:"timeoutMs"`
 	WindowSize      int               `json:"windowSize"`
@@ -74,6 +75,7 @@ func newVPSProbeCollector() *VPSProbeCollector {
 			if userCfg.Enabled != nil && !*userCfg.Enabled {
 				enabled = false
 			}
+			cfg.HubLocal = userCfg.HubLocal
 			if userCfg.IntervalSeconds > 0 {
 				cfg.IntervalSeconds = clampInt(userCfg.IntervalSeconds, 1, 300)
 			}
@@ -163,6 +165,9 @@ func (c *VPSProbeCollector) probeAll(ctx context.Context) {
 	results := make(chan result, len(c.config.Targets))
 
 	for key, addr := range c.config.Targets {
+		if c.config.HubLocal && key == "hub" {
+			continue
+		}
 		wg.Add(1)
 		go func(k, a string) {
 			defer wg.Done()
@@ -177,6 +182,14 @@ func (c *VPSProbeCollector) probeAll(ctx context.Context) {
 	defer c.mu.Unlock()
 
 	now := time.Now().Unix()
+
+	if c.config.HubLocal {
+		c.latest["hub"] = system.VPSProbeTargetStats{
+			Local:   true,
+			Target:  c.config.Targets["hub"],
+			Updated: now,
+		}
+	}
 
 	for r := range results {
 		w := c.windows[r.key]

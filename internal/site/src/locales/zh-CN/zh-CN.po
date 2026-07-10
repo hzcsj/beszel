@@ -1055,6 +1055,12 @@ msgstr "加载状态"
 msgid "Loading..."
 msgstr "加载中..."
 
+#: src/components/routes/system/charts/probe-charts.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Local"
+msgstr "本机"
+
 #: src/components/navbar.tsx
 #: src/components/navbar.tsx
 msgid "Log Out"

@@ -1055,6 +1055,12 @@ msgstr "Стање учитавања"
 msgid "Loading..."
 msgstr "Учитавање..."
 
+#: src/components/routes/system/charts/probe-charts.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Local"
+msgstr ""
+
 #: src/components/navbar.tsx
 #: src/components/navbar.tsx
 msgid "Log Out"

@@ -453,6 +453,7 @@ func averageVPSProbeStats(records []system.Stats) system.VPSProbeStats {
 		failedSamples  float64
 		weightedLatSum float64
 		successSamples float64
+		hasLocal       bool
 	}
 	accum := make(map[string]*targetAccum)
 
@@ -462,13 +463,16 @@ func averageVPSProbeStats(records []system.Stats) system.VPSProbeStats {
 			continue
 		}
 		for key, ts := range vp {
-			if ts.Samples1m == 0 {
-				continue
-			}
 			a, ok := accum[key]
 			if !ok {
 				a = &targetAccum{}
 				accum[key] = a
+			}
+			if ts.Local {
+				a.hasLocal = true
+			}
+			if ts.Samples1m == 0 {
+				continue
 			}
 			n := float64(ts.Samples1m)
 			failed := ts.LossPct1m / 100.0 * n
@@ -488,17 +492,21 @@ func averageVPSProbeStats(records []system.Stats) system.VPSProbeStats {
 
 	result := make(system.VPSProbeStats, len(accum))
 	for key, a := range accum {
-		if a.totalSamples == 0 {
-			continue
+		if a.totalSamples > 0 {
+			ts := system.VPSProbeTargetStats{
+				Samples1m: uint16(a.totalSamples),
+				LossPct1m: twoDecimals(a.failedSamples / a.totalSamples * 100),
+			}
+			if a.successSamples > 0 {
+				ts.LatencyAvg1mMs = twoDecimals(a.weightedLatSum / a.successSamples)
+			}
+			result[key] = ts
+		} else if a.hasLocal {
+			result[key] = system.VPSProbeTargetStats{Local: true}
 		}
-		ts := system.VPSProbeTargetStats{
-			Samples1m: uint16(a.totalSamples),
-			LossPct1m: twoDecimals(a.failedSamples / a.totalSamples * 100),
-		}
-		if a.successSamples > 0 {
-			ts.LatencyAvg1mMs = twoDecimals(a.weightedLatSum / a.successSamples)
-		}
-		result[key] = ts
+	}
+	if len(result) == 0 {
+		return nil
 	}
 	return result
 }

@@ -979,3 +979,85 @@ func TestAverageSystemStats_VPSProbe_SkipsN1Zero(t *testing.T) {
 	assert.Equal(t, uint16(12), hub.Samples1m)
 	assert.Equal(t, 200.0, hub.LatencyAvg1mMs)
 }
+
+func TestAverageSystemStats_VPSProbe_LocalOnlyPreserved(t *testing.T) {
+	input := []system.Stats{
+		{VPSProbe: system.VPSProbeStats{
+			"hub": {Local: true},
+			"ct":  {LatencyAvg1mMs: 30, LossPct1m: 0, Samples1m: 12},
+		}},
+		{VPSProbe: system.VPSProbeStats{
+			"hub": {Local: true},
+			"ct":  {LatencyAvg1mMs: 40, LossPct1m: 0, Samples1m: 12},
+		}},
+	}
+
+	result := records.AverageSystemStatsSlice(input)
+	require.NotNil(t, result.VPSProbe)
+
+	hub := result.VPSProbe["hub"]
+	assert.True(t, hub.Local, "hub Local marker should be preserved")
+	assert.Equal(t, uint16(0), hub.Samples1m, "hub should have no samples")
+	assert.Equal(t, 0.0, hub.LatencyAvg1mMs, "hub should have no latency")
+
+	ct := result.VPSProbe["ct"]
+	assert.False(t, ct.Local, "ct should not be local")
+	assert.Equal(t, uint16(24), ct.Samples1m)
+	assert.Equal(t, 35.0, ct.LatencyAvg1mMs)
+}
+
+func TestAverageSystemStats_VPSProbe_LocalMixedWithRemote(t *testing.T) {
+	input := []system.Stats{
+		{VPSProbe: system.VPSProbeStats{
+			"hub": {Local: true},
+		}},
+		{VPSProbe: system.VPSProbeStats{
+			"hub": {LatencyAvg1mMs: 50, LossPct1m: 10, Samples1m: 12},
+		}},
+	}
+
+	result := records.AverageSystemStatsSlice(input)
+	require.NotNil(t, result.VPSProbe)
+
+	hub := result.VPSProbe["hub"]
+	assert.False(t, hub.Local, "remote data takes precedence over local marker")
+	assert.Equal(t, uint16(12), hub.Samples1m)
+	assert.Equal(t, 50.0, hub.LatencyAvg1mMs)
+	assert.Equal(t, 10.0, hub.LossPct1m)
+}
+
+func TestAverageSystemStats_VPSProbe_LocalRecursiveAggregation(t *testing.T) {
+	batch1 := []system.Stats{
+		{VPSProbe: system.VPSProbeStats{
+			"hub": {Local: true},
+			"ct":  {LatencyAvg1mMs: 20, LossPct1m: 0, Samples1m: 12},
+		}},
+		{VPSProbe: system.VPSProbeStats{
+			"hub": {Local: true},
+			"ct":  {LatencyAvg1mMs: 30, LossPct1m: 0, Samples1m: 12},
+		}},
+	}
+	agg1 := records.AverageSystemStatsSlice(batch1)
+
+	batch2 := []system.Stats{
+		{VPSProbe: system.VPSProbeStats{
+			"hub": {Local: true},
+			"ct":  {LatencyAvg1mMs: 40, LossPct1m: 0, Samples1m: 12},
+		}},
+		{VPSProbe: system.VPSProbeStats{
+			"hub": {Local: true},
+			"ct":  {LatencyAvg1mMs: 50, LossPct1m: 0, Samples1m: 12},
+		}},
+	}
+	agg2 := records.AverageSystemStatsSlice(batch2)
+
+	recursive := records.AverageSystemStatsSlice([]system.Stats{agg1, agg2})
+	require.NotNil(t, recursive.VPSProbe)
+
+	hub := recursive.VPSProbe["hub"]
+	assert.True(t, hub.Local, "hub Local should survive recursive aggregation")
+
+	ct := recursive.VPSProbe["ct"]
+	assert.Equal(t, uint16(48), ct.Samples1m)
+	assert.InDelta(t, 35.0, ct.LatencyAvg1mMs, 0.01)
+}

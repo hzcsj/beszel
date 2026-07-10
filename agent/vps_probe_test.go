@@ -733,3 +733,102 @@ func TestComputeWindowStatsDeterministic(t *testing.T) {
 		}
 	})
 }
+
+func TestHubLocalConfigParsing(t *testing.T) {
+	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"hubLocal":true}`)
+	c := newVPSProbeCollector()
+	if c == nil {
+		t.Fatal("collector should be non-nil")
+	}
+	if !c.config.HubLocal {
+		t.Error("HubLocal should be true")
+	}
+	if len(c.config.Targets) != 4 {
+		t.Errorf("should still have 4 targets, got %d", len(c.config.Targets))
+	}
+}
+
+func TestHubLocalConfigDefault(t *testing.T) {
+	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"intervalSeconds":10}`)
+	c := newVPSProbeCollector()
+	if c == nil {
+		t.Fatal("collector should be non-nil")
+	}
+	if c.config.HubLocal {
+		t.Error("HubLocal should default to false")
+	}
+}
+
+func TestProbeAllHubLocalSkipsHubDial(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			conn.Close()
+		}
+	}()
+
+	c := &VPSProbeCollector{
+		config: VPSProbeConfig{
+			HubLocal:        true,
+			IntervalSeconds: 5,
+			WindowSize:      10,
+			Targets: map[string]string{
+				"hub": "192.0.2.99:1",
+				"ct":  ln.Addr().String(),
+				"cu":  ln.Addr().String(),
+				"cm":  ln.Addr().String(),
+			},
+		},
+		windows: make(map[string]*probeWindow, 4),
+		latest:  make(system.VPSProbeStats, 4),
+		timeout: 200 * time.Millisecond,
+	}
+	for key := range c.config.Targets {
+		c.windows[key] = &probeWindow{samples: make([]probeSample, 10)}
+	}
+
+	c.probeAll(context.Background())
+
+	hub := c.latest["hub"]
+	if !hub.Local {
+		t.Error("hub should have Local=true")
+	}
+	if hub.LatencyMs != 0 {
+		t.Errorf("hub latency should be 0 (not probed), got %f", hub.LatencyMs)
+	}
+	if hub.Samples != 0 {
+		t.Errorf("hub samples should be 0, got %d", hub.Samples)
+	}
+	if hub.Samples1m != 0 {
+		t.Errorf("hub n1 should be 0, got %d", hub.Samples1m)
+	}
+	if hub.Target != "192.0.2.99:1" {
+		t.Errorf("hub target should be preserved, got %q", hub.Target)
+	}
+	if hub.Updated == 0 {
+		t.Error("hub Updated should be set")
+	}
+
+	ct := c.latest["ct"]
+	if ct.Local {
+		t.Error("ct should not be local")
+	}
+	if !ct.Success {
+		t.Error("ct should succeed")
+	}
+	if ct.Samples != 1 {
+		t.Errorf("ct samples should be 1, got %d", ct.Samples)
+	}
+
+	if c.windows["hub"].count != 0 {
+		t.Errorf("hub window should remain empty (not probed), count=%d", c.windows["hub"].count)
+	}
+}

@@ -20,12 +20,12 @@ const probeKeys = ["hub", "ct", "cu", "cm"] as const
 const probeLabels = { hub: "HUB", ct: "CT", cu: "CU", cm: "CM" } as const
 
 function getDetailLat(p: VPSProbeTargetStats | undefined): number | undefined {
-	if (!p) return undefined
+	if (!p || p.local) return undefined
 	return p.lat1 != null && p.lat1 > 0 ? p.lat1 : undefined
 }
 
 function getDetailLoss(p: VPSProbeTargetStats | undefined): number | undefined {
-	if (!p || !p.n1 || p.n1 <= 0) return undefined
+	if (!p || p.local || !p.n1 || p.n1 <= 0) return undefined
 	return Math.min(Math.max(p.loss1 ?? 0, 0), 100)
 }
 
@@ -44,7 +44,6 @@ export function ProbeChart({
 		return Object.values(vp).some((p) => p.n1 && p.n1 > 0)
 	})
 	const { yAxisWidth: leftWidth, updateYAxisWidth: updateLeft } = useYAxisWidth()
-	const { yAxisWidth: rightWidth, updateYAxisWidth: updateRight } = useYAxisWidth()
 	const { isIntersecting, ref } = useIntersectionObserver({ freeze: false })
 
 	const sourceData = chartData.systemStats
@@ -111,7 +110,7 @@ export function ProbeChart({
 				<ChartContainer
 					ref={ref}
 					className={cn("h-full w-full absolute aspect-auto bg-card opacity-0 transition-opacity", {
-						"opacity-100": leftWidth && rightWidth,
+						"opacity-100": leftWidth,
 					})}
 				>
 					<LineChart data={displayData} margin={chartMargin}>
@@ -130,9 +129,9 @@ export function ProbeChart({
 							yAxisId="loss"
 							orientation={chartData.orientation === "left" ? "right" : "left"}
 							className="tracking-tighter"
-							width={rightWidth}
+							width={50}
 							domain={[0, 100]}
-							tickFormatter={(value) => updateRight(`${Math.round(value)}%`)}
+							tickFormatter={(value) => `${Math.round(value)}%`}
 							tickLine={false}
 							axisLine={false}
 						/>
@@ -181,6 +180,15 @@ function ProbeTooltip({ active, payload }: any) {
 				{probeKeys.map((key) => {
 					const p = record.stats?.vp?.[key]
 					if (!p) return null
+					if (p.local) {
+						return (
+							<div key={key} className="flex items-center gap-2">
+								<span className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: probeColors[key] }} />
+								<span className="w-7">{probeLabels[key]}</span>
+								<span className="text-right w-28 text-muted-foreground">{t`Local`}</span>
+							</div>
+						)
+					}
 					const lat = getDetailLat(p)
 					const loss = getDetailLoss(p)
 					const latStr = lat != null ? `${decimalString(lat, 1)} ms` : "--"
