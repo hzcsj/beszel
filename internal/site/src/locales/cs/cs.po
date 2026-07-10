@@ -1243,12 +1243,16 @@ msgid "Overwrite existing alerts"
 msgstr "Přepsat existující upozornění"
 
 #: src/components/routes/system/charts/probe-charts.tsx
-msgid "Packet Loss"
+msgid "Packet loss"
 msgstr ""
 
 #: src/components/routes/system/charts/probe-charts.tsx
-msgid "Packet loss (%)"
-msgstr ""
+#~ msgid "Packet Loss"
+#~ msgstr ""
+
+#: src/components/routes/system/charts/probe-charts.tsx
+#~ msgid "Packet loss (%)"
+#~ msgstr ""
 
 #: src/components/command-palette.tsx
 #: src/components/command-palette.tsx
@@ -1708,7 +1712,11 @@ msgid "Tasks"
 msgstr "Úlohy"
 
 #: src/components/routes/system/charts/probe-charts.tsx
-msgid "TCP probe latency (ms)"
+#~ msgid "TCP probe latency (ms)"
+#~ msgstr ""
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "TCP probe latency (ms) and packet loss (%)"
 msgstr ""
 
 #. Temperature label in systems table

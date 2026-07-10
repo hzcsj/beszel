@@ -440,7 +440,67 @@ func AverageSystemStatsSlice(records []system.Stats) system.Stats {
 		sum.CpuBreakdown = avg
 	}
 
+	// Aggregate VPS probe stats per target using sample-weighted averaging
+	sum.VPSProbe = averageVPSProbeStats(records)
+
 	return sum
+}
+
+// averageVPSProbeStats computes sample-weighted probe aggregates per canonical target.
+func averageVPSProbeStats(records []system.Stats) system.VPSProbeStats {
+	type targetAccum struct {
+		totalSamples   float64
+		failedSamples  float64
+		weightedLatSum float64
+		successSamples float64
+	}
+	accum := make(map[string]*targetAccum)
+
+	for i := range records {
+		vp := records[i].VPSProbe
+		if vp == nil {
+			continue
+		}
+		for key, ts := range vp {
+			if ts.Samples1m == 0 {
+				continue
+			}
+			a, ok := accum[key]
+			if !ok {
+				a = &targetAccum{}
+				accum[key] = a
+			}
+			n := float64(ts.Samples1m)
+			failed := ts.LossPct1m / 100.0 * n
+			successful := n - failed
+			a.totalSamples += n
+			a.failedSamples += failed
+			a.successSamples += successful
+			if successful > 0 {
+				a.weightedLatSum += ts.LatencyAvg1mMs * successful
+			}
+		}
+	}
+
+	if len(accum) == 0 {
+		return nil
+	}
+
+	result := make(system.VPSProbeStats, len(accum))
+	for key, a := range accum {
+		if a.totalSamples == 0 {
+			continue
+		}
+		ts := system.VPSProbeTargetStats{
+			Samples1m: uint16(a.totalSamples),
+			LossPct1m: twoDecimals(a.failedSamples / a.totalSamples * 100),
+		}
+		if a.successSamples > 0 {
+			ts.LatencyAvg1mMs = twoDecimals(a.weightedLatSum / a.successSamples)
+		}
+		result[key] = ts
+	}
+	return result
 }
 
 // Calculate the average stats of a list of container_stats records

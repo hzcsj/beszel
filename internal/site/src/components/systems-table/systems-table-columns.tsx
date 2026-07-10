@@ -30,6 +30,7 @@ import { BatteryState, ConnectionType, connectionTypeLabels, MeterState, SystemS
 import { $longestSystemNameLen, $userSettings } from "@/lib/stores"
 import {
 	cn,
+	compactSig3,
 	copyToClipboard,
 	decimalString,
 	formatBytes,
@@ -218,7 +219,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 		},
 		{
 			id: "loadAverage",
-			accessorFn: ({ info }) => info.la?.reduce((acc, curr) => acc + curr, 0),
+			accessorFn: ({ info }) => info.la?.[0],
 			name: () => t({ message: "Load Avg", comment: "Short label for load average" }),
 			size: 0,
 			Icon: HourglassIcon,
@@ -227,14 +228,14 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 				const { info: sysInfo, status } = info.row.original
 				const { major, minor } = parseSemVer(sysInfo.v)
 				const { colorWarn = 65, colorCrit = 90 } = useStore($userSettings, { keys: ["colorWarn", "colorCrit"] })
-				const loadAverages = sysInfo.la || []
+				const load1 = sysInfo.la?.[0]
 
-				const max = Math.max(...loadAverages)
-				if (max === 0 && (status === SystemStatus.Paused || (major < 1 && minor < 13))) {
+				if ((load1 === undefined || load1 === 0) && (status === SystemStatus.Paused || (major < 1 && minor < 13))) {
 					return null
 				}
+				if (load1 === undefined) return null
 
-				const normalizedLoad = max / (sysInfo.t ?? 1)
+				const normalizedLoad = load1 / (sysInfo.t ?? 1)
 				const threshold = getMeterStateByThresholds(normalizedLoad * 100, colorWarn, colorCrit)
 
 				return (
@@ -247,9 +248,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 								[STATUS_COLORS[SystemStatus.Paused]]: status !== SystemStatus.Up,
 							})}
 						/>
-						{loadAverages?.map((la, i) => (
-							<span key={i}>{decimalString(la, la >= 10 ? 1 : 2)}</span>
-						))}
+						<span>{compactSig3(load1)}</span>
 					</div>
 				)
 			},
@@ -278,8 +277,9 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 					const ul = formatBytes(sysInfo.nb[0], true, userSettings.unitNet, false)
 					return (
 						<span className="tabular-nums whitespace-nowrap">
-							↓{decimalString(dl.value, dl.value >= 100 ? 1 : 2)} {dl.unit} | ↑
-							{decimalString(ul.value, ul.value >= 100 ? 1 : 2)} {ul.unit}
+							↓{compactSig3(dl.value)}
+							{dl.unit} | ↑{compactSig3(ul.value)}
+							{ul.unit}
 						</span>
 					)
 				}
@@ -289,7 +289,8 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 				const { value, unit } = formatBytes(bb, true, userSettings.unitNet, false)
 				return (
 					<span className="tabular-nums whitespace-nowrap text-muted-foreground">
-						{decimalString(value, value >= 100 ? 1 : 2)} {unit}
+						{compactSig3(value)}
+						{unit}
 					</span>
 				)
 			},
@@ -340,8 +341,9 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<span className="tabular-nums whitespace-nowrap">
-								↓{decimalString(rx.value, rx.value >= 100 ? 1 : 2)} {rx.unit} | ↑
-								{decimalString(tx.value, tx.value >= 100 ? 1 : 2)} {tx.unit}
+								↓{compactSig3(rx.value)}
+								{rx.unit} | ↑{compactSig3(tx.value)}
+								{tx.unit}
 							</span>
 						</TooltipTrigger>
 						<TooltipContent side="bottom" className="max-w-xs">
@@ -395,8 +397,9 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 
 				const content = (
 					<span className={cn("tabular-nums whitespace-nowrap", warnClass)}>
-						↓{decimalString(rx.value, rx.value >= 100 ? 1 : 2)} {rx.unit} | ↑
-						{decimalString(tx.value, tx.value >= 100 ? 1 : 2)} {tx.unit}
+						↓{compactSig3(rx.value)}
+						{rx.unit} | ↑{compactSig3(tx.value)}
+						{tx.unit}
 					</span>
 				)
 
@@ -425,10 +428,11 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 				let worstLoss = 0
 				let worstLat = 0
 				for (const key of ["hub", "ct", "cu", "cm"]) {
-					const t = vp[key]
-					if (!t) continue
-					if ((t.loss ?? 0) > worstLoss) worstLoss = t.loss ?? 0
-					if (t.ok && (t.lat ?? 0) > worstLat) worstLat = t.lat ?? 0
+					const p = vp[key]
+					if (!p) continue
+					if ((p.loss ?? 0) > worstLoss) worstLoss = p.loss ?? 0
+					const lat = p.latw ?? p.lat1 ?? p.lat ?? 0
+					if (lat > worstLat) worstLat = lat
 				}
 				return worstLoss * 10000 + worstLat
 			},
@@ -446,12 +450,13 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 
 				const parts = targets.map((key) => {
 					const p = vp[key]
-					if (!p) return { key, label: labels[key], lat: "--", loss: "--", warn: false, crit: false }
-					const latStr = p.ok ? `${Math.round(p.lat ?? 0)}ms` : "--"
-					const lossStr = `${decimalString(p.loss ?? 0, 1)}%`
-					const warn = (p.ok && (p.lat ?? 0) >= 200) || (p.loss ?? 0) >= 5
-					const crit = (p.ok && (p.lat ?? 0) >= 500) || (p.loss ?? 0) >= 20
-					return { key, label: labels[key], lat: latStr, loss: lossStr, warn, crit }
+					if (!p) return { key, latStr: "--", muted: true, warn: false, crit: false }
+					const lat = p.latw ?? p.lat1 ?? p.lat
+					const latStr = lat != null && lat > 0 ? `${Math.round(lat)}` : "--"
+					const loss = p.loss ?? 0
+					const crit = loss >= 20
+					const warn = !crit && loss >= 5
+					return { key, latStr, muted: false, warn, crit }
 				})
 
 				const tooltipLines: string[] = []
@@ -459,7 +464,8 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 					const p = vp[key]
 					if (!p) continue
 					const status = p.ok ? t`Reachable` : t`Unreachable`
-					const latStr = p.ok ? `${Math.round(p.lat ?? 0)}ms` : "--"
+					const windowLat = p.latw ?? p.lat1 ?? p.lat
+					const latStr = windowLat != null && windowLat > 0 ? `${Math.round(windowLat)}ms` : "--"
 					const lossStr = `${decimalString(p.loss ?? 0, 1)}%`
 					tooltipLines.push(`${labels[key]}: ${status} | ${latStr} / ${lossStr}`)
 					if (p.target) tooltipLines.push(`  ${p.target}`)
@@ -480,15 +486,21 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 							<span className="tabular-nums whitespace-nowrap text-xs">
 								{parts.map((p, i) => (
 									<span key={p.key}>
-										{i > 0 && " "}
-										<span className={cn(p.crit ? "text-red-500" : p.warn ? "text-yellow-500" : "")}>
-											{p.label} {p.lat}/{p.loss}
+										{i > 0 && <span className="text-muted-foreground"> | </span>}
+										<span
+											className={cn(
+												p.crit ? "text-red-500" : p.warn ? "text-yellow-500" : p.muted ? "text-muted-foreground" : ""
+											)}
+										>
+											{p.latStr}
 										</span>
 									</span>
 								))}
+								<span className="text-muted-foreground"> ms</span>
 							</span>
 						</TooltipTrigger>
 						<TooltipContent side="bottom" className="max-w-sm">
+							<p className="text-xs text-muted-foreground mb-1">HUB | CT | CU | CM</p>
 							<div className="grid gap-0.5 text-xs font-mono whitespace-pre">
 								{tooltipLines.map((line, i) => (
 									<span key={i}>{line}</span>
@@ -610,7 +622,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			accessorFn: ({ info }) => info.u || undefined,
 			id: "uptime",
 			name: () => t`Uptime`,
-			size: 50,
+			size: 40,
 			Icon: ClockArrowUp,
 			header: sortableHeader,
 			hideSort: true,

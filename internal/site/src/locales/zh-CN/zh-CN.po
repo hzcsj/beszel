@@ -1243,12 +1243,16 @@ msgid "Overwrite existing alerts"
 msgstr "覆盖现有警报"
 
 #: src/components/routes/system/charts/probe-charts.tsx
-msgid "Packet Loss"
+msgid "Packet loss"
 msgstr "丢包率"
 
 #: src/components/routes/system/charts/probe-charts.tsx
-msgid "Packet loss (%)"
-msgstr "丢包率 (%)"
+#~ msgid "Packet Loss"
+#~ msgstr "丢包率"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+#~ msgid "Packet loss (%)"
+#~ msgstr "丢包率 (%)"
 
 #: src/components/command-palette.tsx
 #: src/components/command-palette.tsx
@@ -1708,8 +1712,12 @@ msgid "Tasks"
 msgstr "任务数"
 
 #: src/components/routes/system/charts/probe-charts.tsx
-msgid "TCP probe latency (ms)"
-msgstr "TCP 探测延迟 (ms)"
+#~ msgid "TCP probe latency (ms)"
+#~ msgstr "TCP 探测延迟 (ms)"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "TCP probe latency (ms) and packet loss (%)"
+msgstr "TCP 探测延迟 (ms) 和丢包率 (%)"
 
 #. Temperature label in systems table
 #: src/components/routes/system/smart-table.tsx
@@ -1951,7 +1959,7 @@ msgstr "仅上传"
 #: src/components/routes/system/info-bar.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Uptime"
-msgstr "正常运行时间"
+msgstr "在线"
 
 #: src/components/routes/system/charts/disk-charts.tsx
 #: src/components/routes/system/charts/gpu-charts.tsx

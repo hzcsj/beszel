@@ -74,7 +74,14 @@ export default function SystemsTable() {
 		temp: false,
 		battery: false,
 		services: false,
+		agent: false,
 	})
+
+	useEffect(() => {
+		if (columnVisibility && !("agent" in columnVisibility)) {
+			setColumnVisibility({ ...columnVisibility, agent: false })
+		}
+	}, [])
 
 	const locale = i18n.locale
 

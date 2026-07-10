@@ -177,12 +177,16 @@ type VPSTrafficInfo struct {
 }
 
 type VPSProbeTargetStats struct {
-	LatencyMs float64 `json:"lat,omitempty" cbor:"0,keyasint,omitempty"`
-	LossPct   float64 `json:"loss,omitempty" cbor:"1,keyasint,omitempty"`
-	Success   bool    `json:"ok" cbor:"2,keyasint"`
-	Samples   uint16  `json:"n,omitempty" cbor:"3,keyasint,omitempty"`
-	Updated   int64   `json:"ts,omitempty" cbor:"4,keyasint,omitempty"`
-	Target    string  `json:"target,omitempty" cbor:"5,keyasint,omitempty"`
+	LatencyMs          float64 `json:"lat,omitempty" cbor:"0,keyasint,omitempty"`
+	LossPct            float64 `json:"loss,omitempty" cbor:"1,keyasint,omitempty"`
+	Success            bool    `json:"ok" cbor:"2,keyasint"`
+	Samples            uint16  `json:"n,omitempty" cbor:"3,keyasint,omitempty"`
+	Updated            int64   `json:"ts,omitempty" cbor:"4,keyasint,omitempty"`
+	Target             string  `json:"target,omitempty" cbor:"5,keyasint,omitempty"`
+	LatencyAvg1mMs     float64 `json:"lat1,omitempty" cbor:"6,keyasint,omitempty"`
+	LatencyAvgWindowMs float64 `json:"latw,omitempty" cbor:"7,keyasint,omitempty"`
+	LossPct1m          float64 `json:"loss1,omitempty" cbor:"8,keyasint,omitempty"`
+	Samples1m          uint16  `json:"n1,omitempty" cbor:"9,keyasint,omitempty"`
 }
 
 // VPSProbeStats holds probe results keyed by canonical target name (hub, ct, cu, cm).

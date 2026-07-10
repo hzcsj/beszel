@@ -208,10 +208,10 @@ func TestBuildListSummaryPayloadSizeUnder1KB(t *testing.T) {
 				BillingMode:    "max_rx_tx",
 			},
 			VPSProbe: system.VPSProbeStats{
-				"hub": {LatencyMs: 12.345, LossPct: 0.5, Success: true, Samples: 60, Updated: 1720000000, Target: "hub.example.com:22"},
-				"ct":  {LatencyMs: 25.678, LossPct: 1.2, Success: true, Samples: 60, Updated: 1720000000, Target: "ct.tz.example.com:80"},
-				"cu":  {LatencyMs: 18.901, LossPct: 0, Success: true, Samples: 60, Updated: 1720000000, Target: "cu.tz.example.com:80"},
-				"cm":  {LatencyMs: 35.234, LossPct: 3.5, Success: true, Samples: 60, Updated: 1720000000, Target: "cm.tz.example.com:80"},
+				"hub": {LatencyMs: 12.345, LossPct: 0.5, Success: true, Samples: 60, Updated: 1720000000, Target: "hub.example.com:22", LatencyAvg1mMs: 13.456, LatencyAvgWindowMs: 14.567, LossPct1m: 0.8, Samples1m: 12},
+				"ct":  {LatencyMs: 25.678, LossPct: 1.2, Success: true, Samples: 60, Updated: 1720000000, Target: "ct.tz.example.com:80", LatencyAvg1mMs: 26.789, LatencyAvgWindowMs: 27.890, LossPct1m: 1.5, Samples1m: 12},
+				"cu":  {LatencyMs: 18.901, LossPct: 0, Success: true, Samples: 60, Updated: 1720000000, Target: "cu.tz.example.com:80", LatencyAvg1mMs: 19.012, LatencyAvgWindowMs: 20.123, LossPct1m: 0, Samples1m: 12},
+				"cm":  {LatencyMs: 35.234, LossPct: 3.5, Success: true, Samples: 60, Updated: 1720000000, Target: "cm.tz.example.com:80", LatencyAvg1mMs: 36.345, LatencyAvgWindowMs: 37.456, LossPct1m: 4.2, Samples1m: 12},
 			},
 		},
 	}

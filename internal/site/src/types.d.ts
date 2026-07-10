@@ -100,7 +100,7 @@ export interface SystemInfo {
 export interface VPSProbeTargetStats {
 	/** latency in milliseconds */
 	lat?: number
-	/** packet loss percentage */
+	/** packet loss percentage (full window) */
 	loss?: number
 	/** last probe succeeded */
 	ok: boolean
@@ -110,6 +110,14 @@ export interface VPSProbeTargetStats {
 	ts?: number
 	/** probe target address */
 	target?: string
+	/** 1-minute average latency (ms) */
+	lat1?: number
+	/** full-window average latency (ms) */
+	latw?: number
+	/** 1-minute loss percentage */
+	loss1?: number
+	/** 1-minute sample count (>0 means loss1 is valid) */
+	n1?: number
 }
 
 export interface VPSTrafficInfo {

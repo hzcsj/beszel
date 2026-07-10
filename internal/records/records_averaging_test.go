@@ -818,3 +818,164 @@ func TestAverageContainerStatsSlice_ManyContainers(t *testing.T) {
 	assert.Equal(t, 35.0, result[2].Cpu)
 	assert.Equal(t, 45.0, result[3].Cpu)
 }
+
+func TestAverageSystemStats_VPSProbe_WeightedLatencyLoss(t *testing.T) {
+	input := []system.Stats{
+		{
+			Cpu: 10,
+			VPSProbe: system.VPSProbeStats{
+				"hub": {LatencyAvg1mMs: 100, LossPct1m: 0, Samples1m: 12},
+				"ct":  {LatencyAvg1mMs: 200, LossPct1m: 50, Samples1m: 10},
+			},
+		},
+		{
+			Cpu: 20,
+			VPSProbe: system.VPSProbeStats{
+				"hub": {LatencyAvg1mMs: 200, LossPct1m: 0, Samples1m: 12},
+				"ct":  {LatencyAvg1mMs: 300, LossPct1m: 0, Samples1m: 10},
+			},
+		},
+	}
+
+	result := records.AverageSystemStatsSlice(input)
+
+	require.NotNil(t, result.VPSProbe)
+	hub := result.VPSProbe["hub"]
+	assert.Equal(t, uint16(24), hub.Samples1m)
+	assert.Equal(t, 0.0, hub.LossPct1m)
+	wantHubLat := (100.0*12 + 200.0*12) / 24.0
+	assert.Equal(t, records.TwoDecimals(wantHubLat), hub.LatencyAvg1mMs)
+
+	ct := result.VPSProbe["ct"]
+	assert.Equal(t, uint16(20), ct.Samples1m)
+	ctFailed := 0.5*10 + 0*10
+	ctSuccess := 10.0 - 5 + 10
+	wantCtLoss := ctFailed / 20.0 * 100
+	assert.Equal(t, records.TwoDecimals(wantCtLoss), ct.LossPct1m)
+	wantCtLat := (200.0*5 + 300.0*10) / ctSuccess
+	assert.Equal(t, records.TwoDecimals(wantCtLat), ct.LatencyAvg1mMs)
+}
+
+func TestAverageSystemStats_VPSProbe_AllFailed(t *testing.T) {
+	input := []system.Stats{
+		{
+			VPSProbe: system.VPSProbeStats{
+				"hub": {LossPct1m: 100, Samples1m: 12},
+			},
+		},
+		{
+			VPSProbe: system.VPSProbeStats{
+				"hub": {LossPct1m: 100, Samples1m: 12},
+			},
+		},
+	}
+
+	result := records.AverageSystemStatsSlice(input)
+	hub := result.VPSProbe["hub"]
+	assert.Equal(t, uint16(24), hub.Samples1m)
+	assert.Equal(t, 100.0, hub.LossPct1m)
+	assert.Equal(t, 0.0, hub.LatencyAvg1mMs, "no latency when all failed")
+}
+
+func TestAverageSystemStats_VPSProbe_ZeroLossPreserved(t *testing.T) {
+	input := []system.Stats{
+		{
+			VPSProbe: system.VPSProbeStats{
+				"hub": {LatencyAvg1mMs: 50, LossPct1m: 0, Samples1m: 12},
+			},
+		},
+	}
+
+	result := records.AverageSystemStatsSlice(input)
+	hub := result.VPSProbe["hub"]
+	assert.Equal(t, uint16(12), hub.Samples1m)
+	assert.Equal(t, 0.0, hub.LossPct1m)
+	assert.Equal(t, 50.0, hub.LatencyAvg1mMs)
+}
+
+func TestAverageSystemStats_VPSProbe_MissingTarget(t *testing.T) {
+	input := []system.Stats{
+		{
+			VPSProbe: system.VPSProbeStats{
+				"hub": {LatencyAvg1mMs: 100, LossPct1m: 0, Samples1m: 12},
+			},
+		},
+		{
+			VPSProbe: system.VPSProbeStats{
+				"hub": {LatencyAvg1mMs: 200, LossPct1m: 0, Samples1m: 12},
+				"ct":  {LatencyAvg1mMs: 50, LossPct1m: 0, Samples1m: 12},
+			},
+		},
+	}
+
+	result := records.AverageSystemStatsSlice(input)
+	assert.Equal(t, uint16(24), result.VPSProbe["hub"].Samples1m)
+	assert.Equal(t, uint16(12), result.VPSProbe["ct"].Samples1m)
+}
+
+func TestAverageSystemStats_VPSProbe_PartialStartup(t *testing.T) {
+	input := []system.Stats{
+		{VPSProbe: nil},
+		{
+			VPSProbe: system.VPSProbeStats{
+				"hub": {LatencyAvg1mMs: 100, LossPct1m: 0, Samples1m: 5},
+			},
+		},
+	}
+
+	result := records.AverageSystemStatsSlice(input)
+	hub := result.VPSProbe["hub"]
+	assert.Equal(t, uint16(5), hub.Samples1m)
+	assert.Equal(t, 100.0, hub.LatencyAvg1mMs)
+}
+
+func TestAverageSystemStats_VPSProbe_RecursiveAggregation(t *testing.T) {
+	batch1 := []system.Stats{
+		{VPSProbe: system.VPSProbeStats{"hub": {LatencyAvg1mMs: 100, LossPct1m: 0, Samples1m: 12}}},
+		{VPSProbe: system.VPSProbeStats{"hub": {LatencyAvg1mMs: 200, LossPct1m: 50, Samples1m: 10}}},
+	}
+	agg1 := records.AverageSystemStatsSlice(batch1)
+
+	// agg1: hub n1=22, failed=5, success=17, lat=(100*12+200*5)/17≈152.94, loss=5/22*100≈22.73
+	assert.Equal(t, uint16(22), agg1.VPSProbe["hub"].Samples1m)
+	assert.Equal(t, records.TwoDecimals(5.0/22.0*100), agg1.VPSProbe["hub"].LossPct1m)
+	assert.Equal(t, records.TwoDecimals((100.0*12+200.0*5)/17.0), agg1.VPSProbe["hub"].LatencyAvg1mMs)
+
+	batch2 := []system.Stats{
+		{VPSProbe: system.VPSProbeStats{"hub": {LatencyAvg1mMs: 150, LossPct1m: 0, Samples1m: 12}}},
+		{VPSProbe: system.VPSProbeStats{"hub": {LatencyAvg1mMs: 250, LossPct1m: 0, Samples1m: 12}}},
+	}
+	agg2 := records.AverageSystemStatsSlice(batch2)
+
+	// agg2: hub n1=24, failed=0, success=24, lat=(150*12+250*12)/24=200, loss=0
+	assert.Equal(t, uint16(24), agg2.VPSProbe["hub"].Samples1m)
+	assert.Equal(t, 0.0, agg2.VPSProbe["hub"].LossPct1m)
+	assert.Equal(t, 200.0, agg2.VPSProbe["hub"].LatencyAvg1mMs)
+
+	recursive := []system.Stats{agg1, agg2}
+	final := records.AverageSystemStatsSlice(recursive)
+
+	hub := final.VPSProbe["hub"]
+	// recursive: n1=22+24=46, failed from agg1=22*(22.73/100)=5, from agg2=0 => total failed=5
+	// success=46-5=41, loss=5/46*100≈10.87
+	// lat: agg1 success=17, agg2 success=24 => weighted=(agg1.lat*17 + agg2.lat*24)/41
+	assert.Equal(t, uint16(46), hub.Samples1m)
+	wantFailed := agg1.VPSProbe["hub"].LossPct1m / 100.0 * float64(agg1.VPSProbe["hub"].Samples1m)
+	wantLoss := records.TwoDecimals(wantFailed / 46.0 * 100)
+	assert.Equal(t, wantLoss, hub.LossPct1m)
+	agg1Success := float64(agg1.VPSProbe["hub"].Samples1m) - wantFailed
+	wantLat := records.TwoDecimals((agg1.VPSProbe["hub"].LatencyAvg1mMs*agg1Success + agg2.VPSProbe["hub"].LatencyAvg1mMs*24) / (agg1Success + 24))
+	assert.Equal(t, wantLat, hub.LatencyAvg1mMs)
+}
+
+func TestAverageSystemStats_VPSProbe_SkipsN1Zero(t *testing.T) {
+	input := []system.Stats{
+		{VPSProbe: system.VPSProbeStats{"hub": {LatencyAvg1mMs: 100, LossPct1m: 0, Samples1m: 0}}},
+		{VPSProbe: system.VPSProbeStats{"hub": {LatencyAvg1mMs: 200, LossPct1m: 0, Samples1m: 12}}},
+	}
+
+	result := records.AverageSystemStatsSlice(input)
+	hub := result.VPSProbe["hub"]
+	assert.Equal(t, uint16(12), hub.Samples1m)
+	assert.Equal(t, 200.0, hub.LatencyAvg1mMs)
+}

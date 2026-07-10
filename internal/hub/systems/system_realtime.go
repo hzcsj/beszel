@@ -328,6 +328,21 @@ func buildListSummary(systemID string, data *system.CombinedData) SystemListSumm
 	info.Podman = false
 	info.Os = 0
 	info.Cores = 0
+	if info.VPSProbe != nil {
+		stripped := make(system.VPSProbeStats, len(info.VPSProbe))
+		for k, v := range info.VPSProbe {
+			stripped[k] = system.VPSProbeTargetStats{
+				LatencyMs:          v.LatencyMs,
+				LossPct:            v.LossPct,
+				Success:            v.Success,
+				Samples:            v.Samples,
+				Updated:            v.Updated,
+				Target:             v.Target,
+				LatencyAvgWindowMs: v.LatencyAvgWindowMs,
+			}
+		}
+		info.VPSProbe = stripped
+	}
 	return SystemListSummary{
 		SystemID:  systemID,
 		Timestamp: time.Now().UnixMilli(),

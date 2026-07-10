@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"math"
 	"net"
 	"sync"
 	"time"
@@ -176,6 +177,7 @@ func (c *VPSProbeCollector) probeAll(ctx context.Context) {
 	defer c.mu.Unlock()
 
 	now := time.Now().Unix()
+
 	for r := range results {
 		w := c.windows[r.key]
 		w.samples[w.pos] = probeSample{latencyMs: r.latency, success: r.ok}
@@ -184,28 +186,9 @@ func (c *VPSProbeCollector) probeAll(ctx context.Context) {
 			w.count++
 		}
 
-		var failed int
-		var lastLat float64
-		for i := 0; i < w.count; i++ {
-			s := w.samples[i]
-			if !s.success {
-				failed++
-			}
-		}
-		lossPct := float64(failed) / float64(w.count) * 100
-
-		if r.ok {
-			lastLat = r.latency
-		}
-
-		c.latest[r.key] = system.VPSProbeTargetStats{
-			LatencyMs: lastLat,
-			LossPct:   lossPct,
-			Success:   r.ok,
-			Samples:   uint16(w.count),
-			Updated:   now,
-			Target:    c.config.Targets[r.key],
-		}
+		stats := computeWindowStats(w, c.config.IntervalSeconds, c.config.Targets[r.key])
+		stats.Updated = now
+		c.latest[r.key] = stats
 	}
 }
 
@@ -246,4 +229,63 @@ func clampInt(v, min, max int) int {
 		return max
 	}
 	return v
+}
+
+// computeWindowStats computes probe statistics from a ring buffer deterministically.
+// Exported for testing via the package-internal test.
+func computeWindowStats(w *probeWindow, intervalSec int, target string) system.VPSProbeTargetStats {
+	if w.count == 0 {
+		return system.VPSProbeTargetStats{Target: target}
+	}
+
+	var windowFailed int
+	var windowLatSum float64
+	var windowLatCount int
+	for i := 0; i < w.count; i++ {
+		s := w.samples[i]
+		if !s.success {
+			windowFailed++
+		} else {
+			windowLatSum += s.latencyMs
+			windowLatCount++
+		}
+	}
+
+	recentCount := clampInt(int(math.Ceil(60.0/float64(intervalSec))), 1, w.count)
+	var recentLatSum float64
+	var recentLatCount int
+	var recentFailed int
+	for j := 0; j < recentCount; j++ {
+		idx := (w.pos - 1 - j + len(w.samples)) % len(w.samples)
+		s := w.samples[idx]
+		if s.success {
+			recentLatSum += s.latencyMs
+			recentLatCount++
+		} else {
+			recentFailed++
+		}
+	}
+
+	lastSample := w.samples[(w.pos-1+len(w.samples))%len(w.samples)]
+	var lastLat float64
+	if lastSample.success {
+		lastLat = lastSample.latencyMs
+	}
+
+	stats := system.VPSProbeTargetStats{
+		LatencyMs: lastLat,
+		LossPct:   float64(windowFailed) / float64(w.count) * 100,
+		Success:   lastSample.success,
+		Samples:   uint16(w.count),
+		Target:    target,
+		Samples1m: uint16(recentCount),
+		LossPct1m: float64(recentFailed) / float64(recentCount) * 100,
+	}
+	if recentLatCount > 0 {
+		stats.LatencyAvg1mMs = recentLatSum / float64(recentLatCount)
+	}
+	if windowLatCount > 0 {
+		stats.LatencyAvgWindowMs = windowLatSum / float64(windowLatCount)
+	}
+	return stats
 }

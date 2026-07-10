@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"net"
 	"testing"
 	"time"
@@ -411,4 +412,324 @@ func TestCanonicalProbeKeysLength(t *testing.T) {
 			t.Errorf("unexpected canonical key: %s", k)
 		}
 	}
+}
+
+func newTestCollectorWithListener(t *testing.T, addr string, windowSize, intervalSec int) *VPSProbeCollector {
+	t.Helper()
+	return &VPSProbeCollector{
+		config: VPSProbeConfig{
+			IntervalSeconds: intervalSec,
+			WindowSize:      windowSize,
+			Targets:         map[string]string{"hub": addr},
+		},
+		windows: map[string]*probeWindow{
+			"hub": {samples: make([]probeSample, windowSize)},
+		},
+		latest:  make(system.VPSProbeStats),
+		timeout: 2 * time.Second,
+	}
+}
+
+func TestLatencyAverages(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			conn.Close()
+		}
+	}()
+
+	t.Run("raw_lat_unchanged", func(t *testing.T) {
+		c := newTestCollectorWithListener(t, ln.Addr().String(), 60, 5)
+		c.probeAll(context.Background())
+		hub := c.latest["hub"]
+		if hub.LatencyMs <= 0 {
+			t.Error("raw lat should be positive on success")
+		}
+		if !hub.Success {
+			t.Error("should succeed")
+		}
+	})
+
+	t.Run("one_minute_mean_recent_samples", func(t *testing.T) {
+		c := newTestCollectorWithListener(t, ln.Addr().String(), 60, 5)
+		for i := 0; i < 20; i++ {
+			c.probeAll(context.Background())
+		}
+		hub := c.latest["hub"]
+		if hub.LatencyAvg1mMs <= 0 {
+			t.Error("lat1 should be positive after 20 successful probes")
+		}
+		if hub.LatencyAvgWindowMs <= 0 {
+			t.Error("latw should be positive after 20 successful probes")
+		}
+	})
+
+	t.Run("window_mean_uses_all_success_only", func(t *testing.T) {
+		c := newTestCollectorWithListener(t, ln.Addr().String(), 4, 5)
+		cancelledCtx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		c.probeAll(context.Background())
+		c.probeAll(cancelledCtx)
+		c.probeAll(context.Background())
+		c.probeAll(cancelledCtx)
+
+		hub := c.latest["hub"]
+		if hub.LossPct != 50 {
+			t.Errorf("expected 50%% loss, got %f%%", hub.LossPct)
+		}
+		if hub.LatencyAvgWindowMs <= 0 {
+			t.Error("latw should be positive (only counts successful samples)")
+		}
+	})
+
+	t.Run("failed_samples_do_not_zero_latency_mean", func(t *testing.T) {
+		c := newTestCollectorWithListener(t, ln.Addr().String(), 4, 5)
+		cancelledCtx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		c.probeAll(context.Background())
+		avgAfterOne := c.latest["hub"].LatencyAvgWindowMs
+
+		c.probeAll(cancelledCtx)
+		avgAfterTwo := c.latest["hub"].LatencyAvgWindowMs
+
+		if avgAfterTwo != avgAfterOne {
+			t.Errorf("window mean should not change when failed sample is added (was %f, now %f)", avgAfterOne, avgAfterTwo)
+		}
+	})
+
+	t.Run("no_success_omits_both_means", func(t *testing.T) {
+		c := newTestCollectorWithListener(t, ln.Addr().String(), 4, 5)
+		cancelledCtx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		for i := 0; i < 4; i++ {
+			c.probeAll(cancelledCtx)
+		}
+		hub := c.latest["hub"]
+		if hub.LatencyAvg1mMs != 0 {
+			t.Errorf("lat1 should be 0 when no success, got %f", hub.LatencyAvg1mMs)
+		}
+		if hub.LatencyAvgWindowMs != 0 {
+			t.Errorf("latw should be 0 when no success, got %f", hub.LatencyAvgWindowMs)
+		}
+		if hub.LossPct != 100 {
+			t.Errorf("expected 100%% loss, got %f%%", hub.LossPct)
+		}
+	})
+
+	t.Run("wraparound_recent_samples", func(t *testing.T) {
+		c := newTestCollectorWithListener(t, ln.Addr().String(), 4, 5)
+
+		for i := 0; i < 6; i++ {
+			c.probeAll(context.Background())
+		}
+		hub := c.latest["hub"]
+		if hub.Samples != 4 {
+			t.Errorf("expected 4 samples after wraparound, got %d", hub.Samples)
+		}
+		if hub.LatencyAvg1mMs <= 0 {
+			t.Error("lat1 should still be positive after wraparound")
+		}
+		if hub.LatencyAvgWindowMs <= 0 {
+			t.Error("latw should still be positive after wraparound")
+		}
+	})
+
+	t.Run("eviction_restores_averages", func(t *testing.T) {
+		c := newTestCollectorWithListener(t, ln.Addr().String(), 4, 5)
+		cancelledCtx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		c.probeAll(context.Background())
+		c.probeAll(cancelledCtx)
+		c.probeAll(context.Background())
+		c.probeAll(cancelledCtx)
+
+		if c.latest["hub"].LossPct != 50 {
+			t.Errorf("expected 50%% loss, got %f%%", c.latest["hub"].LossPct)
+		}
+
+		for i := 0; i < 4; i++ {
+			c.probeAll(context.Background())
+		}
+		hub := c.latest["hub"]
+		if hub.LossPct != 0 {
+			t.Errorf("expected 0%% loss after eviction, got %f%%", hub.LossPct)
+		}
+		if hub.LatencyAvgWindowMs <= 0 {
+			t.Error("latw should be positive after eviction")
+		}
+	})
+
+	t.Run("interval_above_one_minute", func(t *testing.T) {
+		c := newTestCollectorWithListener(t, ln.Addr().String(), 10, 120)
+		for i := 0; i < 5; i++ {
+			c.probeAll(context.Background())
+		}
+		hub := c.latest["hub"]
+		if hub.LatencyAvg1mMs <= 0 {
+			t.Error("lat1 should be positive even with large interval (clamped to 1 recent sample)")
+		}
+	})
+}
+
+func makeWindow(samples []probeSample) *probeWindow {
+	w := &probeWindow{
+		samples: make([]probeSample, len(samples)),
+		count:   len(samples),
+		pos:     len(samples) % len(samples),
+	}
+	copy(w.samples, samples)
+	return w
+}
+
+func TestComputeWindowStatsDeterministic(t *testing.T) {
+	t.Run("12_samples_mixed", func(t *testing.T) {
+		samples := make([]probeSample, 60)
+		for i := range samples {
+			samples[i] = probeSample{latencyMs: float64(10 + i), success: true}
+		}
+		samples[58] = probeSample{success: false}
+		samples[59] = probeSample{success: false}
+
+		w := &probeWindow{samples: samples, count: 60, pos: 0}
+		s := computeWindowStats(w, 5, "hub")
+
+		if s.Samples1m != 12 {
+			t.Errorf("n1: want 12, got %d", s.Samples1m)
+		}
+		wantLoss1 := 2.0 / 12.0 * 100
+		if math.Abs(s.LossPct1m-wantLoss1) > 1e-9 {
+			t.Errorf("loss1: want %f, got %f", wantLoss1, s.LossPct1m)
+		}
+		wantLat1 := float64(58+59+60+61+62+63+64+65+66+67) / 10.0
+		if s.LatencyAvg1mMs != wantLat1 {
+			t.Errorf("lat1: want %f, got %f", wantLat1, s.LatencyAvg1mMs)
+		}
+	})
+
+	t.Run("all_success_0pct_loss", func(t *testing.T) {
+		samples := []probeSample{
+			{latencyMs: 10, success: true},
+			{latencyMs: 20, success: true},
+			{latencyMs: 30, success: true},
+			{latencyMs: 40, success: true},
+		}
+		w := makeWindow(samples)
+		s := computeWindowStats(w, 5, "hub")
+		if s.LossPct1m != 0 {
+			t.Errorf("loss1 should be 0, got %f", s.LossPct1m)
+		}
+		if s.Samples1m != 4 {
+			t.Errorf("n1 should be 4, got %d", s.Samples1m)
+		}
+		wantLat := (10.0 + 20 + 30 + 40) / 4.0
+		if s.LatencyAvgWindowMs != wantLat {
+			t.Errorf("latw: want %f, got %f", wantLat, s.LatencyAvgWindowMs)
+		}
+	})
+
+	t.Run("all_failed_100pct_loss", func(t *testing.T) {
+		samples := []probeSample{
+			{success: false},
+			{success: false},
+			{success: false},
+			{success: false},
+		}
+		w := makeWindow(samples)
+		s := computeWindowStats(w, 5, "hub")
+		if s.LossPct1m != 100 {
+			t.Errorf("loss1 should be 100, got %f", s.LossPct1m)
+		}
+		if s.Samples1m == 0 {
+			t.Error("n1 must be positive even when all failed")
+		}
+		if s.LatencyAvg1mMs != 0 {
+			t.Errorf("lat1 should be 0 (omitted) when all failed, got %f", s.LatencyAvg1mMs)
+		}
+	})
+
+	t.Run("wraparound_selects_newest", func(t *testing.T) {
+		samples := make([]probeSample, 4)
+		samples[0] = probeSample{latencyMs: 100, success: true}
+		samples[1] = probeSample{latencyMs: 200, success: true}
+		samples[2] = probeSample{latencyMs: 300, success: true}
+		samples[3] = probeSample{latencyMs: 400, success: true}
+		w := &probeWindow{samples: samples, count: 4, pos: 2}
+
+		s := computeWindowStats(w, 5, "hub")
+		wantLat1 := (100.0 + 200 + 300 + 400) / 4.0
+		if s.LatencyAvg1mMs != wantLat1 {
+			t.Errorf("lat1: want %f, got %f", wantLat1, s.LatencyAvg1mMs)
+		}
+		if s.LatencyMs != 200 {
+			t.Errorf("raw lat should be 200 (pos=2, newest at idx 1), got %f", s.LatencyMs)
+		}
+	})
+
+	t.Run("failed_not_zero_latency", func(t *testing.T) {
+		samples := []probeSample{
+			{latencyMs: 10, success: true},
+			{success: false},
+		}
+		w := makeWindow(samples)
+		s := computeWindowStats(w, 5, "hub")
+		if s.LatencyAvg1mMs != 10 {
+			t.Errorf("lat1 should be 10 (only success counted), got %f", s.LatencyAvg1mMs)
+		}
+		if s.LatencyAvgWindowMs != 10 {
+			t.Errorf("latw should be 10, got %f", s.LatencyAvgWindowMs)
+		}
+	})
+
+	t.Run("large_interval_clamp", func(t *testing.T) {
+		samples := []probeSample{
+			{latencyMs: 50, success: true},
+			{latencyMs: 100, success: true},
+			{latencyMs: 150, success: true},
+		}
+		w := makeWindow(samples)
+		s := computeWindowStats(w, 120, "hub")
+		if s.Samples1m != 1 {
+			t.Errorf("n1 should be 1 for interval>60s, got %d", s.Samples1m)
+		}
+		if s.LatencyAvg1mMs != 150 {
+			t.Errorf("lat1 should use only newest sample (150), got %f", s.LatencyAvg1mMs)
+		}
+	})
+
+	t.Run("eviction_precise", func(t *testing.T) {
+		samples := make([]probeSample, 4)
+		samples[0] = probeSample{latencyMs: 10, success: true}
+		samples[1] = probeSample{success: false}
+		w := &probeWindow{samples: samples, count: 2, pos: 2}
+
+		s1 := computeWindowStats(w, 5, "hub")
+		if s1.LossPct != 50 {
+			t.Errorf("pre-eviction loss: want 50, got %f", s1.LossPct)
+		}
+
+		w.samples[2] = probeSample{latencyMs: 20, success: true}
+		w.pos = 3
+		w.count = 3
+		w.samples[3] = probeSample{latencyMs: 30, success: true}
+		w.pos = 0
+		w.count = 4
+
+		s2 := computeWindowStats(w, 5, "hub")
+		wantLoss := 1.0 / 4.0 * 100
+		if s2.LossPct != wantLoss {
+			t.Errorf("post-eviction loss: want %f, got %f", wantLoss, s2.LossPct)
+		}
+	})
 }

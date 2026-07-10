@@ -1243,12 +1243,16 @@ msgid "Overwrite existing alerts"
 msgstr "覆蓋現有警報"
 
 #: src/components/routes/system/charts/probe-charts.tsx
-msgid "Packet Loss"
+msgid "Packet loss"
 msgstr ""
 
 #: src/components/routes/system/charts/probe-charts.tsx
-msgid "Packet loss (%)"
-msgstr ""
+#~ msgid "Packet Loss"
+#~ msgstr ""
+
+#: src/components/routes/system/charts/probe-charts.tsx
+#~ msgid "Packet loss (%)"
+#~ msgstr ""
 
 #: src/components/command-palette.tsx
 #: src/components/command-palette.tsx
@@ -1708,7 +1712,11 @@ msgid "Tasks"
 msgstr "任務數"
 
 #: src/components/routes/system/charts/probe-charts.tsx
-msgid "TCP probe latency (ms)"
+#~ msgid "TCP probe latency (ms)"
+#~ msgstr ""
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "TCP probe latency (ms) and packet loss (%)"
 msgstr ""
 
 #. Temperature label in systems table
@@ -1951,7 +1959,7 @@ msgstr "僅上傳"
 #: src/components/routes/system/info-bar.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Uptime"
-msgstr "運行時間"
+msgstr "在線"
 
 #: src/components/routes/system/charts/disk-charts.tsx
 #: src/components/routes/system/charts/gpu-charts.tsx
