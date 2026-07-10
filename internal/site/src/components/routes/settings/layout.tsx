@@ -14,7 +14,7 @@ import { lazy, useEffect } from "react"
 import { $router } from "@/components/router.tsx"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card.tsx"
 import { toast } from "@/components/ui/use-toast.ts"
-import { pb } from "@/lib/api"
+import { getUserCapabilities, pb } from "@/lib/api"
 import { $userSettings } from "@/lib/stores.ts"
 import type { UserSettings } from "@/types"
 import { Separator } from "../../ui/separator"
@@ -35,6 +35,7 @@ const AlertsHistoryDataTableSettings = lazy(alertsHistoryDataTableSettingsImport
 const HeartbeatSettings = lazy(heartbeatSettingsImport)
 
 export async function saveSettings(newSettings: Partial<UserSettings>) {
+	if (!getUserCapabilities().manageSettings) return
 	try {
 		// get fresh copy of settings
 		const req = await pb.collection("user_settings").getFirstListItem("", {

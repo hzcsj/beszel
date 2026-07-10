@@ -110,7 +110,7 @@ func (h *Hub) registerApiRoutes(se *core.ServeEvent) error {
 		apiAuth.GET("/update", updateInfo.getUpdate)
 	}
 	// send test notification
-	apiAuth.POST("/test-notification", h.SendTestNotification)
+	apiAuth.POST("/test-notification", h.SendTestNotification).BindFunc(excludeReadOnlyRole)
 	// heartbeat status and test
 	apiAuth.GET("/heartbeat-status", h.getHeartbeatStatus).BindFunc(requireAdminRole)
 	apiAuth.POST("/test-heartbeat", h.testHeartbeat).BindFunc(requireAdminRole)
@@ -121,18 +121,18 @@ func (h *Hub) registerApiRoutes(se *core.ServeEvent) error {
 	// get or create universal tokens
 	apiAuth.GET("/universal-token", h.getUniversalToken).BindFunc(excludeReadOnlyRole)
 	// update / delete user alerts
-	apiAuth.POST("/user-alerts", alerts.UpsertUserAlerts)
-	apiAuth.DELETE("/user-alerts", alerts.DeleteUserAlerts)
+	apiAuth.POST("/user-alerts", alerts.UpsertUserAlerts).BindFunc(excludeReadOnlyRole)
+	apiAuth.DELETE("/user-alerts", alerts.DeleteUserAlerts).BindFunc(excludeReadOnlyRole)
 	// refresh SMART devices for a system
 	apiAuth.POST("/smart/refresh", h.refreshSmartData).BindFunc(excludeReadOnlyRole)
 	// get systemd service details
-	apiAuth.GET("/systemd/info", h.getSystemdInfo)
+	apiAuth.GET("/systemd/info", h.getSystemdInfo).BindFunc(excludeReadOnlyRole)
 	// /containers routes
 	if enabled, _ := utils.GetEnv("CONTAINER_DETAILS"); enabled != "false" {
 		// get container logs
-		apiAuth.GET("/containers/logs", h.getContainerLogs)
+		apiAuth.GET("/containers/logs", h.getContainerLogs).BindFunc(excludeReadOnlyRole)
 		// get container info
-		apiAuth.GET("/containers/info", h.getContainerInfo)
+		apiAuth.GET("/containers/info", h.getContainerInfo).BindFunc(excludeReadOnlyRole)
 	}
 	return nil
 }

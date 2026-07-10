@@ -1448,6 +1448,11 @@ msgstr ""
 msgid "Read"
 msgstr "Ler"
 
+#: src/components/navbar.tsx
+#: src/components/navbar.tsx
+msgid "Read only"
+msgstr ""
+
 #: src/components/routes/system/charts/network-charts.tsx
 msgid "Received"
 msgstr "Recebido"

@@ -29,7 +29,7 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { isAdmin, isReadOnlyUser, logOut, pb } from "@/lib/api"
+import { getUserCapabilities, isAdmin, logOut, pb } from "@/lib/api"
 import { cn, runOnce } from "@/lib/utils"
 import { AddSystemDialog } from "./add-system"
 import { LangToggle } from "./lang-toggle"
@@ -47,6 +47,8 @@ export default function Navbar() {
 	const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
 
 	const AdminLinks = AdminDropdownGroup()
+	const capabilities = getUserCapabilities()
+	const readonly = !capabilities.manageSettings
 
 	const systemTranslation = t`System`
 
@@ -96,6 +98,11 @@ export default function Navbar() {
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end">
 						<DropdownMenuLabel className="max-w-40 truncate">{pb.authStore.record?.email}</DropdownMenuLabel>
+						{readonly && (
+							<DropdownMenuLabel className="pt-0 text-xs text-muted-foreground font-normal">
+								<Trans>Read only</Trans>
+							</DropdownMenuLabel>
+						)}
 						<DropdownMenuSeparator />
 						<DropdownMenuGroup>
 							<DropdownMenuItem
@@ -109,13 +116,15 @@ export default function Navbar() {
 								<HardDriveIcon className="h-4 w-4 me-2.5" strokeWidth={1.5} />
 								<span>S.M.A.R.T.</span>
 							</DropdownMenuItem>
-							<DropdownMenuItem
-								onClick={() => navigate(getPagePath($router, "settings", { name: "general" }))}
-								className="flex items-center"
-							>
-								<SettingsIcon className="h-4 w-4 me-2.5" />
-								<Trans>Settings</Trans>
-							</DropdownMenuItem>
+							{capabilities.manageSettings && (
+								<DropdownMenuItem
+									onClick={() => navigate(getPagePath($router, "settings", { name: "general" }))}
+									className="flex items-center"
+								>
+									<SettingsIcon className="h-4 w-4 me-2.5" />
+									<Trans>Settings</Trans>
+								</DropdownMenuItem>
+							)}
 							{isAdmin() && (
 								<DropdownMenuSub>
 									<DropdownMenuSubTrigger>
@@ -125,7 +134,7 @@ export default function Navbar() {
 									<DropdownMenuSubContent>{AdminLinks}</DropdownMenuSubContent>
 								</DropdownMenuSub>
 							)}
-							{!isReadOnlyUser() && (
+							{capabilities.manageSystems && (
 								<DropdownMenuItem
 									className="flex items-center"
 									onSelect={() => {
@@ -137,13 +146,17 @@ export default function Navbar() {
 								</DropdownMenuItem>
 							)}
 						</DropdownMenuGroup>
-						<DropdownMenuSeparator />
-						<DropdownMenuGroup>
-							<DropdownMenuItem onSelect={logOut} className="flex items-center">
-								<LogOutIcon className="h-4 w-4 me-2.5" />
-								<Trans>Log Out</Trans>
-							</DropdownMenuItem>
-						</DropdownMenuGroup>
+						{!readonly && (
+							<>
+								<DropdownMenuSeparator />
+								<DropdownMenuGroup>
+									<DropdownMenuItem onSelect={logOut} className="flex items-center">
+										<LogOutIcon className="h-4 w-4 me-2.5" />
+										<Trans>Log Out</Trans>
+									</DropdownMenuItem>
+								</DropdownMenuGroup>
+							</>
+						)}
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</div>
@@ -182,44 +195,52 @@ export default function Navbar() {
 				</Tooltip>
 				<LangToggle />
 				<ModeToggle />
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<Link
-							href={getPagePath($router, "settings", { name: "general" })}
-							aria-label="Settings"
-							className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
-						>
-							<SettingsIcon className="h-[1.2rem] w-[1.2rem]" />
-						</Link>
-					</TooltipTrigger>
-					<TooltipContent>
-						<Trans>Settings</Trans>
-					</TooltipContent>
-				</Tooltip>
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<button aria-label="User Actions" className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}>
-							<UserIcon className="h-[1.2rem] w-[1.2rem]" />
-						</button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align={isReadOnlyUser() ? "end" : "center"} className="min-w-44">
-						<DropdownMenuLabel>{pb.authStore.record?.email}</DropdownMenuLabel>
-						<DropdownMenuSeparator />
-						{isAdmin() && (
-							<>
-								{AdminLinks}
-								<DropdownMenuSeparator />
-							</>
-						)}
-						<DropdownMenuItem onSelect={logOut}>
-							<LogOutIcon className="me-2.5 h-4 w-4" />
-							<span>
-								<Trans>Log Out</Trans>
-							</span>
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
-				{!isReadOnlyUser() && (
+				{capabilities.manageSettings && (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Link
+								href={getPagePath($router, "settings", { name: "general" })}
+								aria-label="Settings"
+								className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
+							>
+								<SettingsIcon className="h-[1.2rem] w-[1.2rem]" />
+							</Link>
+						</TooltipTrigger>
+						<TooltipContent>
+							<Trans>Settings</Trans>
+						</TooltipContent>
+					</Tooltip>
+				)}
+				{readonly ? (
+					<span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded ms-1">
+						<Trans>Read only</Trans>
+					</span>
+				) : (
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<button aria-label="User Actions" className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}>
+								<UserIcon className="h-[1.2rem] w-[1.2rem]" />
+							</button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="center" className="min-w-44">
+							<DropdownMenuLabel>{pb.authStore.record?.email}</DropdownMenuLabel>
+							<DropdownMenuSeparator />
+							{isAdmin() && (
+								<>
+									{AdminLinks}
+									<DropdownMenuSeparator />
+								</>
+							)}
+							<DropdownMenuItem onSelect={logOut}>
+								<LogOutIcon className="me-2.5 h-4 w-4" />
+								<span>
+									<Trans>Log Out</Trans>
+								</span>
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				)}
+				{capabilities.manageSystems && (
 					<Button variant="outline" className="flex gap-1 ms-2" onClick={() => setAddSystemDialogOpen(true)}>
 						<PlusIcon className="h-4 w-4 -ms-1" />
 						<Trans>Add {{ foo: systemTranslation }}</Trans>

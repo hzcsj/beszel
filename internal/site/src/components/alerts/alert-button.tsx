@@ -4,6 +4,7 @@ import { BellIcon } from "lucide-react"
 import { memo, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { getUserCapabilities } from "@/lib/api"
 import { $alerts } from "@/lib/stores"
 import { cn } from "@/lib/utils"
 import type { SystemRecord } from "@/types"
@@ -12,10 +13,12 @@ import { AlertDialogContent } from "./alerts-sheet"
 export default memo(function AlertsButton({ system }: { system: SystemRecord }) {
 	const [opened, setOpened] = useState(false)
 	const alerts = useStore($alerts)
+	const canManageAlerts = getUserCapabilities().manageAlerts
 
 	const hasSystemAlert = alerts[system.id]?.size > 0
-	return useMemo(
-		() => (
+	return useMemo(() => {
+		if (!canManageAlerts) return null
+		return (
 			<Sheet>
 				<SheetTrigger asChild>
 					<Button variant="ghost" size="icon" aria-label={t`Alerts`} data-nolink onClick={() => setOpened(true)}>
@@ -30,7 +33,6 @@ export default memo(function AlertsButton({ system }: { system: SystemRecord }) 
 					{opened && <AlertDialogContent system={system} />}
 				</SheetContent>
 			</Sheet>
-		),
-		[opened, hasSystemAlert]
-	)
+		)
+	}, [opened, hasSystemAlert, canManageAlerts])
 })

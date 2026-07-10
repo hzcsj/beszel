@@ -22,7 +22,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { pb } from "@/lib/api"
+import { pb, runIfSensitiveDetailsAllowed } from "@/lib/api"
 import { ServiceStatus, ServiceStatusLabels, type ServiceSubState, ServiceSubStateLabels } from "@/lib/enums"
 import { $allSystemsById } from "@/lib/stores"
 import { cn, decimalString, formatBytes, useBrowserStorage } from "@/lib/utils"
@@ -200,8 +200,10 @@ const AllSystemdTable = memo(function AllSystemdTable({
 	const activeService = useRef<SystemdRecord | null>(null)
 	const [sheetOpen, setSheetOpen] = useState(false)
 	const openSheet = (service: SystemdRecord) => {
-		activeService.current = service
-		setSheetOpen(true)
+		runIfSensitiveDetailsAllowed(() => {
+			activeService.current = service
+			setSheetOpen(true)
+		})
 	}
 
 	const virtualizer = useVirtualizer<HTMLDivElement, HTMLTableRowElement>({

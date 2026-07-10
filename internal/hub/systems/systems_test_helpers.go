@@ -8,6 +8,8 @@ import (
 
 	entities "github.com/henrygd/beszel/internal/entities/system"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/hook"
+	"github.com/pocketbase/pocketbase/tools/subscriptions"
 )
 
 // The hub integration tests create/replace systems and cleanup the test apps quickly.
@@ -124,4 +126,103 @@ func (s *System) StopUpdater() {
 func (s *System) CreateRecords(data *entities.CombinedData) (*core.Record, error) {
 	s.data = data
 	return s.createRecords(data)
+}
+
+// TestRealtimeAuth exercises the production authorizeCustomSubscription function.
+// subscription should use the real PocketBase SDK format, e.g.:
+//
+//	rt_systems?options={"query":{"system":"abc123"}}
+//
+// For non-custom topics (no rt_ prefix), returns nil without checking auth.
+func (sm *SystemManager) TestRealtimeAuth(app core.App, auth *core.Record, subscription string) error {
+	return sm.authorizeCustomSubscription(app, auth, subscription)
+}
+
+// TestParseRealtimeSystemID exposes the production parser for tests.
+func TestParseRealtimeSystemID(subscription string) string {
+	return parseRealtimeSystemID(subscription)
+}
+
+// TestRegistryEntryCount returns the total number of subscription entries
+// across all systems in the global realtime registry.
+func TestRegistryEntryCount() int {
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	total := 0
+	for _, entries := range registry.entries {
+		total += len(entries)
+	}
+	return total
+}
+
+// TestRegistryWorkerRunning returns whether the realtime worker is running.
+func TestRegistryWorkerRunning() bool {
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	return registry.worker != nil && registry.worker.running
+}
+
+// TestResetRegistry clears the global registry for test isolation.
+// It waits for the worker goroutine to fully exit before returning,
+// preventing races with hub cleanup.
+func TestResetRegistry() {
+	registry.mu.Lock()
+	var workerDone chan struct{}
+	if registry.worker != nil && registry.worker.running {
+		close(registry.worker.stopChan)
+		registry.worker.running = false
+		workerDone = registry.worker.done
+	}
+	registry.worker = nil
+	registry.entries = make(map[string][]*subscriptionEntry)
+	registry.mu.Unlock()
+	if workerDone != nil {
+		<-workerDone
+	}
+}
+
+// TestHookResult captures the full result of a hook-level realtime subscribe test.
+type TestHookResult struct {
+	Err            error
+	ClientSubCount int
+	RegistryCount  int
+	WorkerRunning  bool
+}
+
+// TestOnRealtimeSubscribeRequest exercises the full onRealtimeSubscribeRequest
+// handler through a proper hook chain. A terminal handler simulates PocketBase's
+// subscription registration (subscribing the client), so that the post-Next()
+// registry logic in onRealtimeSubscribeRequest actually observes new subscriptions.
+//
+// Returns a TestHookResult with error, client subscription count, registry count
+// and worker state — allowing callers to assert all side effects.
+func (sm *SystemManager) TestOnRealtimeSubscribeRequest(app core.App, auth *core.Record, subs []string) *TestHookResult {
+	client := subscriptions.NewDefaultClient()
+	reqEvent := &core.RequestEvent{
+		App:  app,
+		Auth: auth,
+	}
+	e := &core.RealtimeSubscribeRequestEvent{
+		RequestEvent:  reqEvent,
+		Client:        client,
+		Subscriptions: subs,
+	}
+
+	h := &hook.Hook[*core.RealtimeSubscribeRequestEvent]{}
+	h.BindFunc(sm.onRealtimeSubscribeRequest)
+	h.BindFunc(func(e *core.RealtimeSubscribeRequestEvent) error {
+		for _, sub := range e.Subscriptions {
+			e.Client.Subscribe(sub)
+		}
+		return e.Next()
+	})
+
+	err := h.Trigger(e)
+
+	return &TestHookResult{
+		Err:            err,
+		ClientSubCount: len(client.Subscriptions()),
+		RegistryCount:  TestRegistryEntryCount(),
+		WorkerRunning:  TestRegistryWorkerRunning(),
+	}
 }

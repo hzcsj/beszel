@@ -278,6 +278,23 @@ func TestApiRoutesAuthentication(t *testing.T) {
 			}),
 		},
 		{
+			Name:   "POST /user-alerts - readonly should fail",
+			Method: http.MethodPost,
+			URL:    "/api/beszel/user-alerts",
+			Headers: map[string]string{
+				"Authorization": readOnlyUserToken,
+			},
+			ExpectedStatus:  403,
+			ExpectedContent: []string{"not allowed"},
+			TestAppFactory:  testAppFactory,
+			Body: jsonReader(map[string]any{
+				"name":    "CPU",
+				"value":   80,
+				"min":     10,
+				"systems": []string{system.Id},
+			}),
+		},
+		{
 			Name:            "DELETE /user-alerts - no auth should fail",
 			Method:          http.MethodDelete,
 			URL:             "/api/beszel/user-alerts",
@@ -304,7 +321,6 @@ func TestApiRoutesAuthentication(t *testing.T) {
 				"systems": []string{system.Id},
 			}),
 			BeforeTestFunc: func(t testing.TB, app *pbTests.TestApp, e *core.ServeEvent) {
-				// Create an alert to delete
 				beszelTests.CreateRecord(app, "alerts", map[string]any{
 					"name":   "CPU",
 					"system": system.Id,
@@ -313,6 +329,43 @@ func TestApiRoutesAuthentication(t *testing.T) {
 					"min":    10,
 				})
 			},
+		},
+		{
+			Name:   "DELETE /user-alerts - readonly should fail",
+			Method: http.MethodDelete,
+			URL:    "/api/beszel/user-alerts",
+			Headers: map[string]string{
+				"Authorization": readOnlyUserToken,
+			},
+			ExpectedStatus:  403,
+			ExpectedContent: []string{"not allowed"},
+			TestAppFactory:  testAppFactory,
+			Body: jsonReader(map[string]any{
+				"name":    "CPU",
+				"systems": []string{system.Id},
+			}),
+		},
+		{
+			Name:   "GET /containers/logs - readonly should fail",
+			Method: http.MethodGet,
+			URL:    fmt.Sprintf("/api/beszel/containers/logs?system=%s&container=0123456789ab", system.Id),
+			Headers: map[string]string{
+				"Authorization": readOnlyUserToken,
+			},
+			ExpectedStatus:  403,
+			ExpectedContent: []string{"not allowed"},
+			TestAppFactory:  testAppFactory,
+		},
+		{
+			Name:   "GET /containers/info - readonly should fail",
+			Method: http.MethodGet,
+			URL:    fmt.Sprintf("/api/beszel/containers/info?system=%s&container=0123456789ab", system.Id),
+			Headers: map[string]string{
+				"Authorization": readOnlyUserToken,
+			},
+			ExpectedStatus:  403,
+			ExpectedContent: []string{"not allowed"},
+			TestAppFactory:  testAppFactory,
 		},
 		{
 			Name:            "GET /containers/logs - no auth should fail",
@@ -450,6 +503,17 @@ func TestApiRoutesAuthentication(t *testing.T) {
 			TestAppFactory:  testAppFactory,
 		},
 		// /systemd routes
+		{
+			Name:   "GET /systemd/info - readonly should fail",
+			Method: http.MethodGet,
+			URL:    fmt.Sprintf("/api/beszel/systemd/info?system=%s&service=nginx.service", system.Id),
+			Headers: map[string]string{
+				"Authorization": readOnlyUserToken,
+			},
+			ExpectedStatus:  403,
+			ExpectedContent: []string{"not allowed"},
+			TestAppFactory:  testAppFactory,
+		},
 		{
 			Name:            "GET /systemd/info - no auth should fail",
 			Method:          http.MethodGet,
@@ -589,6 +653,20 @@ func TestApiRoutesAuthentication(t *testing.T) {
 			URL:             "/api/beszel/agent-connect",
 			ExpectedStatus:  400,
 			ExpectedContent: []string{},
+			TestAppFactory:  testAppFactory,
+		},
+		{
+			Name:   "POST /test-notification - readonly should fail",
+			Method: http.MethodPost,
+			URL:    "/api/beszel/test-notification",
+			Body: jsonReader(map[string]any{
+				"url": "generic://127.0.0.1",
+			}),
+			Headers: map[string]string{
+				"Authorization": readOnlyUserToken,
+			},
+			ExpectedStatus:  403,
+			ExpectedContent: []string{"not allowed"},
 			TestAppFactory:  testAppFactory,
 		},
 		{

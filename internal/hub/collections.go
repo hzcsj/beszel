@@ -109,6 +109,53 @@ func setCollectionAuthSettings(app core.App) error {
 		return err
 	}
 
+	// Readonly users must not write user-scoped mutable data.
+	// All five rule fields are set explicitly so startup always restores
+	// the expected state regardless of prior database edits.
+	notReadonly := " && @request.auth.role != \"readonly\""
+	userScopedRule := authenticatedRule + " && user = @request.auth.id"
+	userScopedWriteRule := userScopedRule + notReadonly
+
+	if err := applyCollectionRules(app, []string{"alerts"}, collectionRules{
+		list:   &userScopedRule,
+		view:   nil,
+		create: &userScopedWriteRule,
+		update: &userScopedWriteRule,
+		delete: &userScopedWriteRule,
+	}); err != nil {
+		return err
+	}
+
+	if err := applyCollectionRules(app, []string{"alerts_history"}, collectionRules{
+		list:   &userScopedRule,
+		view:   nil,
+		create: nil,
+		update: nil,
+		delete: &userScopedWriteRule,
+	}); err != nil {
+		return err
+	}
+
+	if err := applyCollectionRules(app, []string{"quiet_hours"}, collectionRules{
+		list:   &userScopedRule,
+		view:   &userScopedRule,
+		create: &userScopedWriteRule,
+		update: &userScopedWriteRule,
+		delete: &userScopedWriteRule,
+	}); err != nil {
+		return err
+	}
+
+	if err := applyCollectionRules(app, []string{"user_settings"}, collectionRules{
+		list:   &userScopedRule,
+		view:   nil,
+		create: &userScopedWriteRule,
+		update: &userScopedWriteRule,
+		delete: nil,
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }
 

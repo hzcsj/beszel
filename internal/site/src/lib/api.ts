@@ -12,6 +12,33 @@ export const pb = new PocketBase(basePath)
 export const isAdmin = () => pb.authStore.record?.role === "admin"
 export const isReadOnlyUser = () => pb.authStore.record?.role === "readonly"
 
+export interface UserCapabilities {
+	manageSystems: boolean
+	manageAlerts: boolean
+	manageSettings: boolean
+	viewSensitiveDetails: boolean
+}
+
+export function getUserCapabilities(): UserCapabilities {
+	const canManage = !isReadOnlyUser()
+	return {
+		manageSystems: canManage,
+		manageAlerts: canManage,
+		manageSettings: canManage,
+		viewSensitiveDetails: canManage,
+	}
+}
+
+export const shouldRedirectSettings = (route?: string) => route === "settings" && !getUserCapabilities().manageSettings
+
+export const shouldInitializeAlertManager = () => getUserCapabilities().manageAlerts
+
+export function runIfSensitiveDetailsAllowed(action: () => void): boolean {
+	if (!getUserCapabilities().viewSensitiveDetails) return false
+	action()
+	return true
+}
+
 export const verifyAuth = () => {
 	pb.collection("users")
 		.authRefresh()
@@ -42,10 +69,12 @@ export async function updateUserSettings() {
 		const req = await pb.collection("user_settings").getFirstListItem("", { fields: "settings" })
 		$userSettings.set(req.settings)
 		return
-	} catch (e) {
-		console.error("get settings", e)
+	} catch (_) {
+		// no existing settings record
 	}
-	// create user settings if error fetching existing
+	if (!getUserCapabilities().manageSettings) {
+		return
+	}
 	try {
 		const createdSettings = await pb.collection("user_settings").create({ user: pb.authStore.record?.id })
 		$userSettings.set(createdSettings.settings)

@@ -19,6 +19,7 @@ func TestCollectionRulesDefault(t *testing.T) {
 	defer hub.Cleanup()
 
 	const isUserMatchesUser = `@request.auth.id != "" && user = @request.auth.id`
+	const isUserMatchesUserNotReadonly = `@request.auth.id != "" && user = @request.auth.id && @request.auth.role != "readonly"`
 
 	const isUserInUsers = `@request.auth.id != "" && users.id ?= @request.auth.id`
 	const isUserInUsersNotReadonly = `@request.auth.id != "" && users.id ?= @request.auth.id && @request.auth.role != "readonly"`
@@ -47,9 +48,9 @@ func TestCollectionRulesDefault(t *testing.T) {
 	require.NoError(t, err, "Failed to find alerts collection")
 	assert.Equal(t, isUserMatchesUser, *alertsCollection.ListRule)
 	assert.Nil(t, alertsCollection.ViewRule)
-	assert.Equal(t, isUserMatchesUser, *alertsCollection.CreateRule)
-	assert.Equal(t, isUserMatchesUser, *alertsCollection.UpdateRule)
-	assert.Equal(t, isUserMatchesUser, *alertsCollection.DeleteRule)
+	assert.Equal(t, isUserMatchesUserNotReadonly, *alertsCollection.CreateRule)
+	assert.Equal(t, isUserMatchesUserNotReadonly, *alertsCollection.UpdateRule)
+	assert.Equal(t, isUserMatchesUserNotReadonly, *alertsCollection.DeleteRule)
 
 	// alerts_history collection
 	alertsHistoryCollection, err := hub.FindCollectionByNameOrId("alerts_history")
@@ -58,7 +59,7 @@ func TestCollectionRulesDefault(t *testing.T) {
 	assert.Nil(t, alertsHistoryCollection.ViewRule)
 	assert.Nil(t, alertsHistoryCollection.CreateRule)
 	assert.Nil(t, alertsHistoryCollection.UpdateRule)
-	assert.Equal(t, isUserMatchesUser, *alertsHistoryCollection.DeleteRule)
+	assert.Equal(t, isUserMatchesUserNotReadonly, *alertsHistoryCollection.DeleteRule)
 
 	// containers collection
 	containersCollection, err := hub.FindCollectionByNameOrId("containers")
@@ -92,9 +93,9 @@ func TestCollectionRulesDefault(t *testing.T) {
 	require.NoError(t, err, "Failed to find quiet_hours collection")
 	assert.Equal(t, isUserMatchesUser, *quietHoursCollection.ListRule)
 	assert.Equal(t, isUserMatchesUser, *quietHoursCollection.ViewRule)
-	assert.Equal(t, isUserMatchesUser, *quietHoursCollection.CreateRule)
-	assert.Equal(t, isUserMatchesUser, *quietHoursCollection.UpdateRule)
-	assert.Equal(t, isUserMatchesUser, *quietHoursCollection.DeleteRule)
+	assert.Equal(t, isUserMatchesUserNotReadonly, *quietHoursCollection.CreateRule)
+	assert.Equal(t, isUserMatchesUserNotReadonly, *quietHoursCollection.UpdateRule)
+	assert.Equal(t, isUserMatchesUserNotReadonly, *quietHoursCollection.DeleteRule)
 
 	// smart_devices collection
 	smartDevicesCollection, err := hub.FindCollectionByNameOrId("smart_devices")
@@ -155,8 +156,8 @@ func TestCollectionRulesDefault(t *testing.T) {
 	require.NoError(t, err, "Failed to find user_settings collection")
 	assert.Equal(t, isUserMatchesUser, *userSettingsCollection.ListRule)
 	assert.Nil(t, userSettingsCollection.ViewRule)
-	assert.Equal(t, isUserMatchesUser, *userSettingsCollection.CreateRule)
-	assert.Equal(t, isUserMatchesUser, *userSettingsCollection.UpdateRule)
+	assert.Equal(t, isUserMatchesUserNotReadonly, *userSettingsCollection.CreateRule)
+	assert.Equal(t, isUserMatchesUserNotReadonly, *userSettingsCollection.UpdateRule)
 	assert.Nil(t, userSettingsCollection.DeleteRule)
 }
 
@@ -169,15 +170,16 @@ func TestCollectionRulesShareAllSystems(t *testing.T) {
 	const isUserNotReadonly = `@request.auth.id != "" && @request.auth.role != "readonly"`
 
 	const isUserMatchesUser = `@request.auth.id != "" && user = @request.auth.id`
+	const isUserMatchesUserNotReadonly = `@request.auth.id != "" && user = @request.auth.id && @request.auth.role != "readonly"`
 
 	// alerts collection
 	alertsCollection, err := hub.FindCollectionByNameOrId("alerts")
 	require.NoError(t, err, "Failed to find alerts collection")
 	assert.Equal(t, isUserMatchesUser, *alertsCollection.ListRule)
 	assert.Nil(t, alertsCollection.ViewRule)
-	assert.Equal(t, isUserMatchesUser, *alertsCollection.CreateRule)
-	assert.Equal(t, isUserMatchesUser, *alertsCollection.UpdateRule)
-	assert.Equal(t, isUserMatchesUser, *alertsCollection.DeleteRule)
+	assert.Equal(t, isUserMatchesUserNotReadonly, *alertsCollection.CreateRule)
+	assert.Equal(t, isUserMatchesUserNotReadonly, *alertsCollection.UpdateRule)
+	assert.Equal(t, isUserMatchesUserNotReadonly, *alertsCollection.DeleteRule)
 
 	// alerts_history collection
 	alertsHistoryCollection, err := hub.FindCollectionByNameOrId("alerts_history")
@@ -186,7 +188,7 @@ func TestCollectionRulesShareAllSystems(t *testing.T) {
 	assert.Nil(t, alertsHistoryCollection.ViewRule)
 	assert.Nil(t, alertsHistoryCollection.CreateRule)
 	assert.Nil(t, alertsHistoryCollection.UpdateRule)
-	assert.Equal(t, isUserMatchesUser, *alertsHistoryCollection.DeleteRule)
+	assert.Equal(t, isUserMatchesUserNotReadonly, *alertsHistoryCollection.DeleteRule)
 
 	// containers collection
 	containersCollection, err := hub.FindCollectionByNameOrId("containers")
@@ -220,9 +222,9 @@ func TestCollectionRulesShareAllSystems(t *testing.T) {
 	require.NoError(t, err, "Failed to find quiet_hours collection")
 	assert.Equal(t, isUserMatchesUser, *quietHoursCollection.ListRule)
 	assert.Equal(t, isUserMatchesUser, *quietHoursCollection.ViewRule)
-	assert.Equal(t, isUserMatchesUser, *quietHoursCollection.CreateRule)
-	assert.Equal(t, isUserMatchesUser, *quietHoursCollection.UpdateRule)
-	assert.Equal(t, isUserMatchesUser, *quietHoursCollection.DeleteRule)
+	assert.Equal(t, isUserMatchesUserNotReadonly, *quietHoursCollection.CreateRule)
+	assert.Equal(t, isUserMatchesUserNotReadonly, *quietHoursCollection.UpdateRule)
+	assert.Equal(t, isUserMatchesUserNotReadonly, *quietHoursCollection.DeleteRule)
 
 	// smart_devices collection
 	smartDevicesCollection, err := hub.FindCollectionByNameOrId("smart_devices")
@@ -283,9 +285,219 @@ func TestCollectionRulesShareAllSystems(t *testing.T) {
 	require.NoError(t, err, "Failed to find user_settings collection")
 	assert.Equal(t, isUserMatchesUser, *userSettingsCollection.ListRule)
 	assert.Nil(t, userSettingsCollection.ViewRule)
-	assert.Equal(t, isUserMatchesUser, *userSettingsCollection.CreateRule)
-	assert.Equal(t, isUserMatchesUser, *userSettingsCollection.UpdateRule)
+	assert.Equal(t, isUserMatchesUserNotReadonly, *userSettingsCollection.CreateRule)
+	assert.Equal(t, isUserMatchesUserNotReadonly, *userSettingsCollection.UpdateRule)
 	assert.Nil(t, userSettingsCollection.DeleteRule)
+}
+
+func TestReadonlyCollectionWriteBlocked(t *testing.T) {
+	hub, _ := beszelTests.NewTestHub(t.TempDir())
+	defer hub.Cleanup()
+	hub.StartHub()
+
+	owner, err := beszelTests.CreateUser(hub, "owner@test.com", "password")
+	require.NoError(t, err)
+	ownerToken, _ := owner.NewAuthToken()
+
+	roUser, err := beszelTests.CreateUserWithRole(hub, "readonly@test.com", "password", "readonly")
+	require.NoError(t, err)
+	roToken, _ := roUser.NewAuthToken()
+
+	// Second readonly user with no pre-existing records — for create tests
+	// where roUser already has records (unique index would reject duplicates).
+	roUser2, err := beszelTests.CreateUserWithRole(hub, "readonly2@test.com", "password", "readonly")
+	require.NoError(t, err)
+	roToken2, _ := roUser2.NewAuthToken()
+
+	sys, err := beszelTests.CreateRecord(hub, "systems", map[string]any{
+		"name": "s1", "host": "127.0.0.1", "port": "33914",
+		"users": []string{owner.Id},
+	})
+	require.NoError(t, err)
+
+	// Records owned by readonly user — proves the `role != "readonly"` condition
+	// is what blocks the operation, not the `user = @request.auth.id` mismatch.
+	roAlert, err := beszelTests.CreateRecord(hub, "alerts", map[string]any{
+		"name": "Memory", "system": sys.Id, "user": roUser.Id,
+		"value": 90, "min": 10,
+	})
+	require.NoError(t, err)
+
+	roQH, err := beszelTests.CreateRecord(hub, "quiet_hours", map[string]any{
+		"user": roUser.Id, "type": "daily", "start": "2026-01-01 22:00:00.000Z", "end": "2026-01-02 06:00:00.000Z",
+	})
+	require.NoError(t, err)
+
+	roSettings, err := beszelTests.CreateRecord(hub, "user_settings", map[string]any{
+		"user": roUser.Id,
+	})
+	require.NoError(t, err)
+
+	roAlertHistory, err := beszelTests.CreateRecord(hub, "alerts_history", map[string]any{
+		"user": roUser.Id, "name": "Memory", "system": sys.Id,
+	})
+	require.NoError(t, err)
+
+	// Records owned by owner — for compatibility tests.
+	ownerAlert, err := beszelTests.CreateRecord(hub, "alerts", map[string]any{
+		"name": "CPU", "system": sys.Id, "user": owner.Id,
+		"value": 80, "min": 10,
+	})
+	require.NoError(t, err)
+
+	ownerQH, err := beszelTests.CreateRecord(hub, "quiet_hours", map[string]any{
+		"user": owner.Id, "type": "daily", "start": "2026-01-01 22:00:00.000Z", "end": "2026-01-02 06:00:00.000Z",
+	})
+	require.NoError(t, err)
+
+	ownerSettings, err := beszelTests.CreateRecord(hub, "user_settings", map[string]any{
+		"user": owner.Id,
+	})
+	require.NoError(t, err)
+
+	ownerAlertHistory, err := beszelTests.CreateRecord(hub, "alerts_history", map[string]any{
+		"user": owner.Id, "name": "CPU", "system": sys.Id,
+	})
+	require.NoError(t, err)
+
+	testAppFactory := func(t testing.TB) *pbTests.TestApp { return hub.TestApp }
+
+	scenarios := []beszelTests.ApiScenario{
+		// ── alerts: create ──
+		{
+			Name:   "readonly cannot create alert",
+			Method: http.MethodPost, URL: "/api/collections/alerts/records",
+			Headers:         map[string]string{"Authorization": roToken2},
+			Body:            jsonReader(map[string]any{"name": "Disk", "system": sys.Id, "user": roUser2.Id, "value": 80, "min": 10}),
+			ExpectedStatus:  400,
+			ExpectedContent: []string{"Failed to create record"},
+			TestAppFactory:  testAppFactory,
+		},
+		{
+			Name:   "owner can create alert",
+			Method: http.MethodPost, URL: "/api/collections/alerts/records",
+			Headers:         map[string]string{"Authorization": ownerToken},
+			Body:            jsonReader(map[string]any{"name": "Disk", "system": sys.Id, "user": owner.Id, "value": 80, "min": 10}),
+			ExpectedStatus:  200,
+			ExpectedContent: []string{`"name":"Disk"`},
+			TestAppFactory:  testAppFactory,
+		},
+		// ── alerts: update (readonly's own record) ──
+		{
+			Name:   "readonly cannot update own alert",
+			Method: http.MethodPatch, URL: fmt.Sprintf("/api/collections/alerts/records/%s", roAlert.Id),
+			Headers:         map[string]string{"Authorization": roToken},
+			Body:            jsonReader(map[string]any{"value": 95}),
+			ExpectedStatus:  404,
+			ExpectedContent: []string{"resource wasn't found"},
+			TestAppFactory:  testAppFactory,
+		},
+		{
+			Name:   "owner can update alert",
+			Method: http.MethodPatch, URL: fmt.Sprintf("/api/collections/alerts/records/%s", ownerAlert.Id),
+			Headers:         map[string]string{"Authorization": ownerToken},
+			Body:            jsonReader(map[string]any{"value": 95}),
+			ExpectedStatus:  200,
+			ExpectedContent: []string{`"value":95`},
+			TestAppFactory:  testAppFactory,
+		},
+		// ── alerts: delete (readonly's own record) ──
+		{
+			Name:   "readonly cannot delete own alert",
+			Method: http.MethodDelete, URL: fmt.Sprintf("/api/collections/alerts/records/%s", roAlert.Id),
+			Headers:         map[string]string{"Authorization": roToken},
+			ExpectedStatus:  404,
+			ExpectedContent: []string{"resource wasn't found"},
+			TestAppFactory:  testAppFactory,
+		},
+		// ── quiet_hours: create (roUser2 has no pre-existing record) ──
+		{
+			Name:   "readonly cannot create quiet_hours",
+			Method: http.MethodPost, URL: "/api/collections/quiet_hours/records",
+			Headers:         map[string]string{"Authorization": roToken2},
+			Body:            jsonReader(map[string]any{"user": roUser2.Id, "type": "one-time", "start": "2026-03-01 22:00:00.000Z", "end": "2026-03-02 06:00:00.000Z"}),
+			ExpectedStatus:  400,
+			ExpectedContent: []string{"Failed to create record"},
+			TestAppFactory:  testAppFactory,
+		},
+		// ── quiet_hours: update (readonly's own record) ──
+		{
+			Name:   "readonly cannot update own quiet_hours",
+			Method: http.MethodPatch, URL: fmt.Sprintf("/api/collections/quiet_hours/records/%s", roQH.Id),
+			Headers:         map[string]string{"Authorization": roToken},
+			Body:            jsonReader(map[string]any{"start": "2026-01-01 23:00:00.000Z"}),
+			ExpectedStatus:  404,
+			ExpectedContent: []string{"resource wasn't found"},
+			TestAppFactory:  testAppFactory,
+		},
+		{
+			Name:   "owner can update quiet_hours",
+			Method: http.MethodPatch, URL: fmt.Sprintf("/api/collections/quiet_hours/records/%s", ownerQH.Id),
+			Headers:         map[string]string{"Authorization": ownerToken},
+			Body:            jsonReader(map[string]any{"start": "2026-01-01 23:00:00.000Z"}),
+			ExpectedStatus:  200,
+			ExpectedContent: []string{`"start"`},
+			TestAppFactory:  testAppFactory,
+		},
+		// ── quiet_hours: delete (readonly's own record) ──
+		{
+			Name:   "readonly cannot delete own quiet_hours",
+			Method: http.MethodDelete, URL: fmt.Sprintf("/api/collections/quiet_hours/records/%s", roQH.Id),
+			Headers:         map[string]string{"Authorization": roToken},
+			ExpectedStatus:  404,
+			ExpectedContent: []string{"resource wasn't found"},
+			TestAppFactory:  testAppFactory,
+		},
+		// ── user_settings: create (roUser2 has no pre-existing record) ──
+		{
+			Name:   "readonly cannot create user_settings",
+			Method: http.MethodPost, URL: "/api/collections/user_settings/records",
+			Headers:         map[string]string{"Authorization": roToken2},
+			Body:            jsonReader(map[string]any{"user": roUser2.Id}),
+			ExpectedStatus:  400,
+			ExpectedContent: []string{"Failed to create record"},
+			TestAppFactory:  testAppFactory,
+		},
+		// ── user_settings: update (readonly's own record) ──
+		{
+			Name:   "readonly cannot update own user_settings",
+			Method: http.MethodPatch, URL: fmt.Sprintf("/api/collections/user_settings/records/%s", roSettings.Id),
+			Headers:         map[string]string{"Authorization": roToken},
+			Body:            jsonReader(map[string]any{"settings": map[string]any{"chartTime": "24h"}}),
+			ExpectedStatus:  404,
+			ExpectedContent: []string{"resource wasn't found"},
+			TestAppFactory:  testAppFactory,
+		},
+		{
+			Name:   "owner can update user_settings",
+			Method: http.MethodPatch, URL: fmt.Sprintf("/api/collections/user_settings/records/%s", ownerSettings.Id),
+			Headers:         map[string]string{"Authorization": ownerToken},
+			Body:            jsonReader(map[string]any{"settings": map[string]any{"chartTime": "24h"}}),
+			ExpectedStatus:  200,
+			ExpectedContent: []string{`"settings"`},
+			TestAppFactory:  testAppFactory,
+		},
+		// ── alerts_history: delete (readonly's own record) ──
+		{
+			Name:   "readonly cannot delete own alerts_history",
+			Method: http.MethodDelete, URL: fmt.Sprintf("/api/collections/alerts_history/records/%s", roAlertHistory.Id),
+			Headers:         map[string]string{"Authorization": roToken},
+			ExpectedStatus:  404,
+			ExpectedContent: []string{"resource wasn't found"},
+			TestAppFactory:  testAppFactory,
+		},
+		{
+			Name:   "owner can delete own alerts_history",
+			Method: http.MethodDelete, URL: fmt.Sprintf("/api/collections/alerts_history/records/%s", ownerAlertHistory.Id),
+			Headers:        map[string]string{"Authorization": ownerToken},
+			ExpectedStatus: 204,
+			TestAppFactory: testAppFactory,
+		},
+	}
+
+	for _, scenario := range scenarios {
+		scenario.Test(t)
+	}
 }
 
 func TestDisablePasswordAuth(t *testing.T) {

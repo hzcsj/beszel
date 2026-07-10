@@ -1443,6 +1443,11 @@ msgstr "Reachable"
 msgid "Read"
 msgstr "Read"
 
+#: src/components/navbar.tsx
+#: src/components/navbar.tsx
+msgid "Read only"
+msgstr "Read only"
+
 #: src/components/routes/system/charts/network-charts.tsx
 msgid "Received"
 msgstr "Received"

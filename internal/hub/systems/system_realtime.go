@@ -2,7 +2,9 @@ package systems
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -35,6 +37,7 @@ type realtimeRegistry struct {
 type realtimeWorker struct {
 	ticker   *time.Ticker
 	stopChan chan struct{}
+	done     chan struct{} // closed when goroutine exits
 	running  bool
 }
 
@@ -51,7 +54,82 @@ func (sm *SystemManager) onRealtimeConnectRequest(e *core.RealtimeConnectRequest
 	return nil
 }
 
+// parseRealtimeSystemID extracts the system ID from a PocketBase realtime
+// subscription topic. The SDK encodes options as JSON:
+//
+//	rt_systems?options={"query":{"system":"abc123"}}
+func parseRealtimeSystemID(subscription string) string {
+	idx := strings.IndexByte(subscription, '?')
+	if idx < 0 {
+		return ""
+	}
+	q, err := url.ParseQuery(subscription[idx+1:])
+	if err != nil {
+		return ""
+	}
+	if optJSON := q.Get("options"); optJSON != "" {
+		var opts struct {
+			Query map[string]string `json:"query"`
+		}
+		if json.Unmarshal([]byte(optJSON), &opts) == nil {
+			if id := opts.Query["system"]; id != "" {
+				return id
+			}
+		}
+	}
+	return q.Get("system")
+}
+
+// authorizeCustomSubscription validates auth and system access for a single
+// custom rt_systems/rt_metrics subscription. Returns nil if authorized.
+func (sm *SystemManager) authorizeCustomSubscription(app core.App, auth *core.Record, subscription string) error {
+	if auth == nil {
+		return fmt.Errorf("unauthorized")
+	}
+	systemId := parseRealtimeSystemID(subscription)
+	if systemId == "" {
+		return fmt.Errorf("missing or malformed system parameter")
+	}
+	sys, ok := sm.systems.GetOk(systemId)
+	if !ok {
+		return fmt.Errorf("system not found: %s", systemId)
+	}
+	if !sys.HasUser(app, auth) {
+		return fmt.Errorf("forbidden: no access to system %s", systemId)
+	}
+	return nil
+}
+
+// authorizeRealtimeSubscriptions validates auth and system access for custom
+// rt_systems/rt_metrics topics before they are registered. It delegates to
+// authorizeCustomSubscription and translates errors into PocketBase API errors.
+func (sm *SystemManager) authorizeRealtimeSubscriptions(e *core.RealtimeSubscribeRequestEvent) error {
+	for _, sub := range e.Subscriptions {
+		if !strings.HasPrefix(sub, "rt_systems") && !strings.HasPrefix(sub, "rt_metrics") {
+			continue
+		}
+		if err := sm.authorizeCustomSubscription(e.App, e.Auth, sub); err != nil {
+			msg := err.Error()
+			switch {
+			case strings.HasPrefix(msg, "unauthorized"):
+				return e.UnauthorizedError("The request requires valid record authorization token.", nil)
+			case strings.HasPrefix(msg, "missing"):
+				return e.BadRequestError("Missing or malformed system parameter.", nil)
+			case strings.HasPrefix(msg, "system not found"):
+				return e.NotFoundError("The requested resource wasn't found.", nil)
+			default:
+				return e.ForbiddenError("The authorized record is not allowed to perform this action.", nil)
+			}
+		}
+	}
+	return nil
+}
+
 func (sm *SystemManager) onRealtimeSubscribeRequest(e *core.RealtimeSubscribeRequestEvent) error {
+	if err := sm.authorizeRealtimeSubscriptions(e); err != nil {
+		return err
+	}
+
 	oldSubs := e.Client.Subscriptions()
 	err := e.Next()
 	newSubs := e.Client.Subscriptions()
@@ -135,6 +213,7 @@ func (sm *SystemManager) ensureWorkerRunning() {
 	}
 	w := &realtimeWorker{
 		stopChan: make(chan struct{}),
+		done:     make(chan struct{}),
 		running:  true,
 	}
 	registry.worker = w
@@ -151,6 +230,7 @@ func (sm *SystemManager) checkWorkerStop() {
 }
 
 func (sm *SystemManager) runRealtimeWorker(w *realtimeWorker) {
+	defer close(w.done)
 	sm.fetchAndBroadcast()
 	interval := sm.computeInterval()
 	w.ticker = time.NewTicker(interval)

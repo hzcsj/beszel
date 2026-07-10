@@ -2,6 +2,7 @@ import "./index.css"
 import { i18n } from "@lingui/core"
 import { I18nProvider } from "@lingui/react"
 import { useStore } from "@nanostores/react"
+import { redirectPage } from "@nanostores/router"
 import { DirectionProvider } from "@radix-ui/react-direction"
 // import { Suspense, lazy, useEffect, StrictMode } from "react"
 import { lazy, memo, Suspense, useEffect } from "react"
@@ -12,7 +13,7 @@ import Settings from "@/components/routes/settings/layout.tsx"
 import { ThemeProvider } from "@/components/theme-provider.tsx"
 import { Toaster } from "@/components/ui/toaster.tsx"
 import { alertManager } from "@/lib/alerts"
-import { isAdmin, pb, updateUserSettings } from "@/lib/api.ts"
+import { isAdmin, pb, shouldInitializeAlertManager, shouldRedirectSettings, updateUserSettings } from "@/lib/api.ts"
 import { dynamicActivate, getLocale } from "@/lib/i18n"
 import {
 	$authenticated,
@@ -53,24 +54,29 @@ const App = memo(() => {
 		updateUserSettings()
 		// need to get system list before alerts
 		systemsManager.init()
+		const alertsEnabled = shouldInitializeAlertManager()
 		systemsManager
-			// get current systems list
 			.refresh()
-			// subscribe to new system updates
 			.then(systemsManager.subscribe)
-			// get current alerts
-			.then(alertManager.refresh)
-			// subscribe to new alert updates
-			.then(alertManager.subscribe)
+			.then(() => {
+				if (alertsEnabled) {
+					return alertManager.refresh().then(alertManager.subscribe)
+				}
+			})
 		return () => {
 			unsubscribeAuth()
-			alertManager.unsubscribe()
+			if (alertsEnabled) {
+				alertManager.unsubscribe()
+			}
 			systemsManager.unsubscribe()
 		}
 	}, [])
 
 	if (!page) {
 		return <h1 className="text-3xl text-center my-14">404</h1>
+	} else if (shouldRedirectSettings(page.route)) {
+		redirectPage($router, "home")
+		return null
 	} else if (page.route === "home") {
 		return <Home />
 	} else if (page.route === "system") {

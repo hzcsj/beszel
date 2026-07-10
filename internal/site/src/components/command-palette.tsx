@@ -27,7 +27,7 @@ import {
 	CommandSeparator,
 	CommandShortcut,
 } from "@/components/ui/command"
-import { isAdmin } from "@/lib/api"
+import { getUserCapabilities, isAdmin } from "@/lib/api"
 import { $systems } from "@/lib/stores"
 import { getHostDisplayValue, listen } from "@/lib/utils"
 import { $router, basePath, navigate, prependBasePath } from "./router"
@@ -45,6 +45,7 @@ export default memo(function CommandPalette({ open, setOpen }: { open: boolean; 
 
 	return useMemo(() => {
 		const systems = $systems.get()
+		const { manageSettings } = getUserCapabilities()
 		const SettingsShortcut = (
 			<CommandShortcut>
 				<Trans>Settings</Trans>
@@ -122,56 +123,60 @@ export default memo(function CommandPalette({ open, setOpen }: { open: boolean; 
 								<Trans>Page</Trans>
 							</CommandShortcut>
 						</CommandItem>
-						<CommandItem
-							onSelect={() => {
-								navigate(getPagePath($router, "settings", { name: "general" }))
-								setOpen(false)
-							}}
-						>
-							<SettingsIcon className="me-2 size-4" />
-							<span>
-								<Trans>Settings</Trans>
-							</span>
-							{SettingsShortcut}
-						</CommandItem>
-						<CommandItem
-							keywords={["alerts"]}
-							onSelect={() => {
-								navigate(getPagePath($router, "settings", { name: "notifications" }))
-								setOpen(false)
-							}}
-						>
-							<MailIcon className="me-2 size-4" />
-							<span>
-								<Trans>Notifications</Trans>
-							</span>
-							{SettingsShortcut}
-						</CommandItem>
-						<CommandItem
-							keywords={[t`Universal token`]}
-							onSelect={() => {
-								navigate(getPagePath($router, "settings", { name: "tokens" }))
-								setOpen(false)
-							}}
-						>
-							<FingerprintIcon className="me-2 size-4" />
-							<span>
-								<Trans>Tokens & Fingerprints</Trans>
-							</span>
-							{SettingsShortcut}
-						</CommandItem>
-						<CommandItem
-							onSelect={() => {
-								navigate(getPagePath($router, "settings", { name: "alert-history" }))
-								setOpen(false)
-							}}
-						>
-							<AlertOctagonIcon className="me-2 size-4" />
-							<span>
-								<Trans>Alert History</Trans>
-							</span>
-							{SettingsShortcut}
-						</CommandItem>
+						{manageSettings && (
+							<>
+								<CommandItem
+									onSelect={() => {
+										navigate(getPagePath($router, "settings", { name: "general" }))
+										setOpen(false)
+									}}
+								>
+									<SettingsIcon className="me-2 size-4" />
+									<span>
+										<Trans>Settings</Trans>
+									</span>
+									{SettingsShortcut}
+								</CommandItem>
+								<CommandItem
+									keywords={["alerts"]}
+									onSelect={() => {
+										navigate(getPagePath($router, "settings", { name: "notifications" }))
+										setOpen(false)
+									}}
+								>
+									<MailIcon className="me-2 size-4" />
+									<span>
+										<Trans>Notifications</Trans>
+									</span>
+									{SettingsShortcut}
+								</CommandItem>
+								<CommandItem
+									keywords={[t`Universal token`]}
+									onSelect={() => {
+										navigate(getPagePath($router, "settings", { name: "tokens" }))
+										setOpen(false)
+									}}
+								>
+									<FingerprintIcon className="me-2 size-4" />
+									<span>
+										<Trans>Tokens & Fingerprints</Trans>
+									</span>
+									{SettingsShortcut}
+								</CommandItem>
+								<CommandItem
+									onSelect={() => {
+										navigate(getPagePath($router, "settings", { name: "alert-history" }))
+										setOpen(false)
+									}}
+								>
+									<AlertOctagonIcon className="me-2 size-4" />
+									<span>
+										<Trans>Alert History</Trans>
+									</span>
+									{SettingsShortcut}
+								</CommandItem>
+							</>
+						)}
 						<CommandItem
 							keywords={["help", "oauth", "oidc"]}
 							onSelect={() => {

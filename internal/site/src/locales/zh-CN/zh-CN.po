@@ -1443,6 +1443,11 @@ msgstr "可达"
 msgid "Read"
 msgstr "读取"
 
+#: src/components/navbar.tsx
+#: src/components/navbar.tsx
+msgid "Read only"
+msgstr "只读"
+
 #: src/components/routes/system/charts/network-charts.tsx
 msgid "Received"
 msgstr "接收"

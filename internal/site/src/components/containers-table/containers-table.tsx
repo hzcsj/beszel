@@ -17,7 +17,7 @@ import { useVirtualizer, type VirtualItem } from "@tanstack/react-virtual"
 import { memo, type RefObject, useEffect, useRef, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { pb } from "@/lib/api"
+import { pb, runIfSensitiveDetailsAllowed } from "@/lib/api"
 import type { ContainerRecord } from "@/types"
 import { containerChartCols } from "@/components/containers-table/containers-table-columns"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -219,8 +219,10 @@ const AllContainersTable = memo(function AllContainersTable({
 	const activeContainer = useRef<ContainerRecord | null>(null)
 	const [sheetOpen, setSheetOpen] = useState(false)
 	const openSheet = (container: ContainerRecord) => {
-		activeContainer.current = container
-		setSheetOpen(true)
+		runIfSensitiveDetailsAllowed(() => {
+			activeContainer.current = container
+			setSheetOpen(true)
+		})
 	}
 
 	const virtualizer = useVirtualizer<HTMLDivElement, HTMLTableRowElement>({
