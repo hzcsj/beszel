@@ -158,15 +158,23 @@ func (m *VPSTrafficManager) saveState() {
 	}
 }
 
-func (m *VPSTrafficManager) getNodeConfig(systemID, systemName string) VPSTrafficNodeConfig {
+func (m *VPSTrafficManager) getNodeConfig(systemID, systemName string, dbTraffic *VPSTrafficNodeConfig) VPSTrafficNodeConfig {
 	result := m.config.Default
-	if nc, ok := m.config.Systems[systemID]; ok {
-		mergeNodeConfig(&result, &nc)
-		return result
-	}
 	if nc, ok := m.config.Systems[systemName]; ok {
 		mergeNodeConfig(&result, &nc)
-		return result
+	}
+	if nc, ok := m.config.Systems[systemID]; ok {
+		mergeNodeConfig(&result, &nc)
+	}
+	if dbTraffic != nil {
+		validated := *dbTraffic
+		if validated.ResetDay != 0 {
+			validated.ResetDay = clampResetDay(validated.ResetDay)
+		}
+		if validated.BillingMode != "" {
+			validated.BillingMode = validBillingMode(validated.BillingMode)
+		}
+		mergeNodeConfig(&result, &validated)
 	}
 	return result
 }
@@ -184,11 +192,12 @@ func mergeNodeConfig(base, override *VPSTrafficNodeConfig) {
 }
 
 // DeriveTraffic computes VPSTrafficInfo from stats.ni and persists state.
-func (m *VPSTrafficManager) DeriveTraffic(systemID, systemName string, ni map[string][4]uint64) *system.VPSTrafficInfo {
+// dbTraffic is the per-system DB-level config (highest priority); nil if not set.
+func (m *VPSTrafficManager) DeriveTraffic(systemID, systemName string, dbTraffic *VPSTrafficNodeConfig, ni map[string][4]uint64) *system.VPSTrafficInfo {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	nc := m.getNodeConfig(systemID, systemName)
+	nc := m.getNodeConfig(systemID, systemName, dbTraffic)
 	now := time.Now()
 	cycleKey := computeCycleKey(now, nc.ResetDay)
 	cycleStart := computeCycleStart(now, nc.ResetDay)

@@ -283,6 +283,15 @@ msgid "Beszel uses <0>Shoutrrr</0> to integrate with popular notification servic
 msgstr "Beszel은 여러 인기 있는 알림 서비스와 연동하기 위해 <0>Shoutrrr</0>을 이용합니다."
 
 #: src/components/add-system.tsx
+msgid "Billing mode"
+msgstr ""
+
+#: src/components/systems-table/systems-table-columns.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Billing mode: {modeLabel}"
+msgstr ""
+
+#: src/components/add-system.tsx
 msgid "Binary"
 msgstr "실행 파일"
 
@@ -551,6 +560,19 @@ msgstr "누적 업로드"
 msgid "Current state"
 msgstr "현재 상태"
 
+#. placeholder {0}: vt.cs
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Cycle start: {0}"
+msgstr ""
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Cycle Traffic"
+msgstr ""
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Cycle traffic: ↓{crxStr} / ↑{ctxStr}"
+msgstr ""
+
 #. Power Cycles
 #: src/components/routes/system/smart-table.tsx
 msgid "Cycles"
@@ -560,6 +582,12 @@ msgstr "사이클"
 #: src/components/routes/settings/quiet-hours.tsx
 msgid "Daily"
 msgstr "매일"
+
+#. placeholder {0}: vt.dl
+#: src/components/systems-table/systems-table-columns.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Days left: {0}"
+msgstr ""
 
 #: src/components/routes/system/info-bar.tsx
 msgctxt "Default system layout option"
@@ -658,6 +686,16 @@ msgstr "오프라인 ({downSystemsLength})"
 #: src/components/routes/system/network-sheet.tsx
 msgid "Download"
 msgstr "다운로드"
+
+#: src/components/add-system.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Download + upload"
+msgstr ""
+
+#: src/components/add-system.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Download only"
+msgstr ""
 
 #: src/components/alerts-history-columns.tsx
 msgid "Duration"
@@ -943,6 +981,10 @@ msgstr "이미지"
 msgid "Inactive"
 msgstr "비활성"
 
+#: src/components/add-system.tsx
+msgid "Inherit default"
+msgstr ""
+
 #: src/components/routes/settings/heartbeat.tsx
 msgid "Interval"
 msgstr "간격"
@@ -1043,6 +1085,11 @@ msgstr "수동 설정 방법"
 #: src/components/routes/system/chart-card.tsx
 msgid "Max 1 min"
 msgstr "1분간 최댓값"
+
+#: src/components/add-system.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Max of download/upload"
+msgstr ""
 
 #: src/components/containers-table/containers-table-columns.tsx
 #: src/components/routes/system/info-bar.tsx
@@ -1310,6 +1357,11 @@ msgstr "선호 언어"
 msgid "Process started"
 msgstr "프로세스 시작됨"
 
+#: src/components/systems-table/systems-table-columns.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Projected: {projStr}"
+msgstr ""
+
 #. Use 'Key' if your language requires many more characters
 #: src/components/add-system.tsx
 msgid "Public Key"
@@ -1323,6 +1375,15 @@ msgstr "대기열 깊이"
 #: src/components/routes/settings/quiet-hours.tsx
 msgid "Quiet Hours"
 msgstr "조용한 시간"
+
+#: src/components/add-system.tsx
+msgid "Quota"
+msgstr ""
+
+#: src/components/systems-table/systems-table-columns.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Quota: {quotaStr} ({pctStr}%)"
+msgstr ""
 
 #. Disk read
 #: src/components/routes/system/charts/disk-charts.tsx
@@ -1361,6 +1422,15 @@ msgstr "필요한 대상"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Requires"
 msgstr "필요 항목"
+
+#: src/components/add-system.tsx
+msgid "Reset day"
+msgstr ""
+
+#. placeholder {0}: vt.rd
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Reset day: {0}"
+msgstr ""
 
 #: src/components/login/forgot-pass-form.tsx
 msgid "Reset Password"
@@ -1703,14 +1773,18 @@ msgctxt "Disk I/O"
 msgid "Total time spent on read/write (can exceed 100%)"
 msgstr ""
 
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Total Traffic"
+msgstr ""
+
 #. placeholder {0}: data.length
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Total: {0}"
 msgstr "총: {0}"
 
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Traffic"
-msgstr ""
+#~ msgid "Traffic"
+#~ msgstr ""
 
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Triggered by"
@@ -1822,6 +1896,11 @@ msgstr "10분마다 업데이트됩니다."
 msgid "Upload"
 msgstr "업로드"
 
+#: src/components/add-system.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Upload only"
+msgstr ""
+
 #: src/components/routes/system/info-bar.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Uptime"
@@ -1875,6 +1954,10 @@ msgstr "최근 200개의 알림을 봅니다."
 #: src/components/systems-table/systems-table.tsx
 msgid "Visible Fields"
 msgstr "표시할 열"
+
+#: src/components/add-system.tsx
+msgid "VPS Traffic"
+msgstr ""
 
 #: src/components/routes/system/chart-card.tsx
 msgid "Waiting for enough records to display"

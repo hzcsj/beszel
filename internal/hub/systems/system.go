@@ -241,7 +241,16 @@ func (sys *System) createRecords(data *system.CombinedData) (*core.Record, error
 		// derive VPS traffic info from stats.ni before saving info
 		if sys.manager.trafficManager != nil && data.Stats.NetworkInterfaces != nil {
 			systemName := systemRecord.GetString("name")
-			data.Info.VPSTraffic = sys.manager.trafficManager.DeriveTraffic(sys.Id, systemName, data.Stats.NetworkInterfaces)
+			var dbTraffic *VPSTrafficNodeConfig
+			if vpsJSON := systemRecord.GetString("vps"); vpsJSON != "" {
+				var settings struct {
+					Traffic *VPSTrafficNodeConfig `json:"traffic"`
+				}
+				if json.Unmarshal([]byte(vpsJSON), &settings) == nil && settings.Traffic != nil {
+					dbTraffic = settings.Traffic
+				}
+			}
+			data.Info.VPSTraffic = sys.manager.trafficManager.DeriveTraffic(sys.Id, systemName, dbTraffic, data.Stats.NetworkInterfaces)
 		}
 
 		// update system record (do this last because it triggers alerts and we need above records to be inserted first)

@@ -93,7 +93,7 @@ func TestFirstSampleInitialization(t *testing.T) {
 		"eth0": {1000, 500, 1_000_000, 2_000_000},
 	}
 
-	info := m.DeriveTraffic("sys1", "hzcsj", ni)
+	info := m.DeriveTraffic("sys1", "hzcsj", nil, ni)
 	if info == nil {
 		t.Fatal("expected non-nil VPSTrafficInfo on first sample")
 	}
@@ -114,10 +114,10 @@ func TestNormalPositiveDeltas(t *testing.T) {
 	m := NewVPSTrafficManager(dir)
 
 	ni1 := map[string][4]uint64{"eth0": {0, 0, 100_000, 200_000}}
-	m.DeriveTraffic("sys1", "node1", ni1)
+	m.DeriveTraffic("sys1", "node1", nil, ni1)
 
 	ni2 := map[string][4]uint64{"eth0": {0, 0, 150_000, 300_000}}
-	info := m.DeriveTraffic("sys1", "node1", ni2)
+	info := m.DeriveTraffic("sys1", "node1", nil, ni2)
 	if info == nil {
 		t.Fatal("expected non-nil")
 	}
@@ -141,14 +141,14 @@ func TestCounterReset(t *testing.T) {
 	m := NewVPSTrafficManager(dir)
 
 	ni1 := map[string][4]uint64{"eth0": {0, 0, 1_000_000, 2_000_000}}
-	m.DeriveTraffic("sys1", "node1", ni1)
+	m.DeriveTraffic("sys1", "node1", nil, ni1)
 
 	ni2 := map[string][4]uint64{"eth0": {0, 0, 1_500_000, 2_500_000}}
-	m.DeriveTraffic("sys1", "node1", ni2)
+	m.DeriveTraffic("sys1", "node1", nil, ni2)
 
 	// simulate reboot: counters drop
 	ni3 := map[string][4]uint64{"eth0": {0, 0, 50_000, 30_000}}
-	info := m.DeriveTraffic("sys1", "node1", ni3)
+	info := m.DeriveTraffic("sys1", "node1", nil, ni3)
 	if info == nil {
 		t.Fatal("expected non-nil")
 	}
@@ -167,10 +167,10 @@ func TestCounterResetZero(t *testing.T) {
 	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1}}`)
 	m := NewVPSTrafficManager(dir)
 
-	m.DeriveTraffic("sys1", "n", map[string][4]uint64{"eth0": {0, 0, 500_000, 600_000}})
-	m.DeriveTraffic("sys1", "n", map[string][4]uint64{"eth0": {0, 0, 700_000, 800_000}})
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 500_000, 600_000}})
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 700_000, 800_000}})
 
-	info := m.DeriveTraffic("sys1", "n", map[string][4]uint64{"eth0": {0, 0, 0, 0}})
+	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 0, 0}})
 	// counter dropped to 0 → delta must be 0, not the old total
 	if info.CycleTxBytes != 200_000 || info.CycleRxBytes != 200_000 {
 		t.Errorf("zero counter should not spike: ctx=%d crx=%d", info.CycleTxBytes, info.CycleRxBytes)
@@ -199,7 +199,7 @@ func TestMonthReset(t *testing.T) {
 
 	// Cross-cycle sample: counters grew since last observation
 	ni := map[string][4]uint64{"eth0": {0, 0, 2_100_000, 1_100_000}}
-	info := m.DeriveTraffic("sys1", "node1", ni)
+	info := m.DeriveTraffic("sys1", "node1", nil, ni)
 	if info == nil {
 		t.Fatal("expected non-nil")
 	}
@@ -227,11 +227,11 @@ func TestPerNodeResetDay(t *testing.T) {
 	t.Setenv("VPS_TRAFFIC_CONFIG", cfg)
 	m := NewVPSTrafficManager(dir)
 
-	ncDefault := m.getNodeConfig("sys1", "hzcsj")
+	ncDefault := m.getNodeConfig("sys1", "hzcsj", nil)
 	if ncDefault.ResetDay != 1 {
 		t.Errorf("expected default resetDay=1, got %d", ncDefault.ResetDay)
 	}
-	ncUS := m.getNodeConfig("sys2", "us")
+	ncUS := m.getNodeConfig("sys2", "us", nil)
 	if ncUS.ResetDay != 16 {
 		t.Errorf("expected us resetDay=16, got %d", ncUS.ResetDay)
 	}
@@ -244,7 +244,7 @@ func TestInvalidConfigFallback(t *testing.T) {
 
 	// Manager must still work with built-in defaults
 	ni := map[string][4]uint64{"eth0": {0, 0, 100, 200}}
-	info := m.DeriveTraffic("sys1", "node1", ni)
+	info := m.DeriveTraffic("sys1", "node1", nil, ni)
 	if info == nil {
 		t.Fatal("invalid config should fall back to defaults, not disable")
 	}
@@ -262,7 +262,7 @@ func TestEmptyConfigUsesDefaults(t *testing.T) {
 	m := NewVPSTrafficManager(dir)
 
 	ni := map[string][4]uint64{"eth0": {0, 0, 100, 200}}
-	info := m.DeriveTraffic("sys1", "node1", ni)
+	info := m.DeriveTraffic("sys1", "node1", nil, ni)
 	if info == nil {
 		t.Fatal("empty config should still enable traffic tracking with defaults")
 	}
@@ -277,9 +277,9 @@ func TestStatePersistenceAndReload(t *testing.T) {
 	m := NewVPSTrafficManager(dir)
 
 	ni1 := map[string][4]uint64{"eth0": {0, 0, 100_000, 200_000}}
-	m.DeriveTraffic("sys1", "node1", ni1)
+	m.DeriveTraffic("sys1", "node1", nil, ni1)
 	ni2 := map[string][4]uint64{"eth0": {0, 0, 150_000, 300_000}}
-	m.DeriveTraffic("sys1", "node1", ni2)
+	m.DeriveTraffic("sys1", "node1", nil, ni2)
 
 	m2 := NewVPSTrafficManager(dir)
 	state, ok := m2.states["sys1"]
@@ -320,13 +320,13 @@ func TestMultipleInterfaces(t *testing.T) {
 		"eth0": {0, 0, 100_000, 200_000},
 		"eth1": {0, 0, 50_000, 80_000},
 	}
-	m.DeriveTraffic("sys1", "node1", ni1)
+	m.DeriveTraffic("sys1", "node1", nil, ni1)
 
 	ni2 := map[string][4]uint64{
 		"eth0": {0, 0, 120_000, 250_000},
 		"eth1": {0, 0, 70_000, 100_000},
 	}
-	info := m.DeriveTraffic("sys1", "node1", ni2)
+	info := m.DeriveTraffic("sys1", "node1", nil, ni2)
 	if info == nil {
 		t.Fatal("expected non-nil")
 	}
@@ -344,11 +344,11 @@ func TestSingleNicReset(t *testing.T) {
 	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1}}`)
 	m := NewVPSTrafficManager(dir)
 
-	m.DeriveTraffic("sys1", "n", map[string][4]uint64{"eth0": {0, 0, 1_000_000, 2_000_000}})
-	m.DeriveTraffic("sys1", "n", map[string][4]uint64{"eth0": {0, 0, 1_200_000, 2_400_000}})
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 1_000_000, 2_000_000}})
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 1_200_000, 2_400_000}})
 
 	// eth0 reboots, counter goes to 10_000
-	info := m.DeriveTraffic("sys1", "n", map[string][4]uint64{"eth0": {0, 0, 10_000, 20_000}})
+	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 10_000, 20_000}})
 	// delta1: tx=200k, rx=400k.  delta2 (reset): tx=10k, rx=20k
 	if info.CycleTxBytes != 210_000 {
 		t.Errorf("single NIC reset CycleTx: want 210000, got %d", info.CycleTxBytes)
@@ -364,12 +364,12 @@ func TestMultiNicOneReset(t *testing.T) {
 	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1}}`)
 	m := NewVPSTrafficManager(dir)
 
-	m.DeriveTraffic("sys1", "n", map[string][4]uint64{
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{
 		"eth0": {0, 0, 1_000_000, 2_000_000},
 		"eth1": {0, 0, 500_000, 600_000},
 	})
 
-	info := m.DeriveTraffic("sys1", "n", map[string][4]uint64{
+	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{
 		"eth0": {0, 0, 1_100_000, 2_200_000}, // normal growth +100k tx, +200k rx
 		"eth1": {0, 0, 5_000, 8_000},          // reset: delta = 5k tx, 8k rx
 	})
@@ -390,13 +390,13 @@ func TestNicDisappears(t *testing.T) {
 	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1}}`)
 	m := NewVPSTrafficManager(dir)
 
-	m.DeriveTraffic("sys1", "n", map[string][4]uint64{
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{
 		"eth0": {0, 0, 100_000, 200_000},
 		"eth1": {0, 0, 50_000, 80_000},
 	})
 
 	// eth1 disappears
-	info := m.DeriveTraffic("sys1", "n", map[string][4]uint64{
+	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{
 		"eth0": {0, 0, 120_000, 250_000},
 	})
 	// only eth0 delta should count: tx +20k, rx +50k
@@ -415,12 +415,12 @@ func TestNewNicAppears(t *testing.T) {
 	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1}}`)
 	m := NewVPSTrafficManager(dir)
 
-	m.DeriveTraffic("sys1", "n", map[string][4]uint64{
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{
 		"eth0": {0, 0, 100_000, 200_000},
 	})
 
 	// eth1 appears with existing large counters
-	info := m.DeriveTraffic("sys1", "n", map[string][4]uint64{
+	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{
 		"eth0": {0, 0, 120_000, 250_000},   // normal: tx +20k, rx +50k
 		"eth1": {0, 0, 5_000_000, 8_000_000}, // new NIC → baseline only
 	})
@@ -433,7 +433,7 @@ func TestNewNicAppears(t *testing.T) {
 	}
 
 	// third sample: now both NICs contribute deltas
-	info2 := m.DeriveTraffic("sys1", "n", map[string][4]uint64{
+	info2 := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{
 		"eth0": {0, 0, 130_000, 260_000},
 		"eth1": {0, 0, 5_010_000, 8_020_000},
 	})
@@ -455,7 +455,7 @@ func TestInvalidDefaultBillingModeFallback(t *testing.T) {
 		t.Errorf("invalid default billingMode should fall back: got %s", m.config.Default.BillingMode)
 	}
 	ni := map[string][4]uint64{"eth0": {0, 0, 100, 200}}
-	info := m.DeriveTraffic("sys1", "node1", ni)
+	info := m.DeriveTraffic("sys1", "node1", nil, ni)
 	if info.BillingMode != BillingModeMaxRxTx {
 		t.Errorf("DeriveTraffic should return canonical mode: got %s", info.BillingMode)
 	}
@@ -467,11 +467,11 @@ func TestInvalidSystemBillingModeFallback(t *testing.T) {
 	t.Setenv("VPS_TRAFFIC_CONFIG", cfg)
 	m := NewVPSTrafficManager(dir)
 
-	ncUS := m.getNodeConfig("sys2", "us")
+	ncUS := m.getNodeConfig("sys2", "us", nil)
 	if ncUS.BillingMode != BillingModeMaxRxTx {
 		t.Errorf("invalid system billingMode should fall back to max_rx_tx: got %s", ncUS.BillingMode)
 	}
-	ncOther := m.getNodeConfig("sys1", "hzcsj")
+	ncOther := m.getNodeConfig("sys1", "hzcsj", nil)
 	if ncOther.BillingMode != BillingModeSumRxTx {
 		t.Errorf("valid default billingMode should be preserved: got %s", ncOther.BillingMode)
 	}
@@ -483,20 +483,114 @@ func TestValidBillingModeOverride(t *testing.T) {
 	t.Setenv("VPS_TRAFFIC_CONFIG", cfg)
 	m := NewVPSTrafficManager(dir)
 
-	ncUS := m.getNodeConfig("sys2", "us")
+	ncUS := m.getNodeConfig("sys2", "us", nil)
 	if ncUS.BillingMode != BillingModeTxOnly {
 		t.Errorf("valid override should take effect: got %s", ncUS.BillingMode)
 	}
 	ni := map[string][4]uint64{"eth0": {0, 0, 500, 300}}
-	m.DeriveTraffic("sys2", "us", ni)
+	m.DeriveTraffic("sys2", "us", nil, ni)
 	ni2 := map[string][4]uint64{"eth0": {0, 0, 700, 400}}
-	info := m.DeriveTraffic("sys2", "us", ni2)
+	info := m.DeriveTraffic("sys2", "us", nil, ni2)
 	if info.BillingMode != BillingModeTxOnly {
 		t.Errorf("DeriveTraffic should return tx_only: got %s", info.BillingMode)
 	}
 	// tx_only: billable = cycleTx only = 200
 	if info.BillableBytes != 200 {
 		t.Errorf("tx_only billable should be 200, got %d", info.BillableBytes)
+	}
+}
+
+func TestDBConfigOverridesEnvSystem(t *testing.T) {
+	dir := t.TempDir()
+	cfg := `{"default":{"resetDay":1,"quotaBytes":1000,"billingMode":"max_rx_tx"},"systems":{"us":{"resetDay":16}}}`
+	t.Setenv("VPS_TRAFFIC_CONFIG", cfg)
+	m := NewVPSTrafficManager(dir)
+
+	dbTraffic := &VPSTrafficNodeConfig{ResetDay: 20, QuotaBytes: 5000}
+	nc := m.getNodeConfig("sys2", "us", dbTraffic)
+	if nc.ResetDay != 20 {
+		t.Errorf("DB config should override env system resetDay: got %d", nc.ResetDay)
+	}
+	if nc.QuotaBytes != 5000 {
+		t.Errorf("DB config should override env default quota: got %d", nc.QuotaBytes)
+	}
+	if nc.BillingMode != BillingModeMaxRxTx {
+		t.Errorf("billingMode should inherit from env default: got %s", nc.BillingMode)
+	}
+}
+
+func TestDBConfigOverridesEnvDefault(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1,"billingMode":"max_rx_tx"}}`)
+	m := NewVPSTrafficManager(dir)
+
+	dbTraffic := &VPSTrafficNodeConfig{BillingMode: "tx_only"}
+	nc := m.getNodeConfig("sys1", "hzcsj", dbTraffic)
+	if nc.BillingMode != BillingModeTxOnly {
+		t.Errorf("DB billingMode should override env default: got %s", nc.BillingMode)
+	}
+	if nc.ResetDay != 1 {
+		t.Errorf("resetDay should inherit from env default: got %d", nc.ResetDay)
+	}
+}
+
+func TestDBConfigInvalidFallback(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1,"billingMode":"max_rx_tx"}}`)
+	m := NewVPSTrafficManager(dir)
+
+	dbTraffic := &VPSTrafficNodeConfig{ResetDay: 50, BillingMode: "nonsense"}
+	nc := m.getNodeConfig("sys1", "node1", dbTraffic)
+	if nc.ResetDay != 28 {
+		t.Errorf("DB resetDay >28 should be clamped: got %d", nc.ResetDay)
+	}
+	if nc.BillingMode != BillingModeMaxRxTx {
+		t.Errorf("invalid DB billingMode should fall back to max_rx_tx: got %s", nc.BillingMode)
+	}
+}
+
+func TestDBConfigEmptyDoesNotOverride(t *testing.T) {
+	dir := t.TempDir()
+	cfg := `{"default":{"resetDay":5,"quotaBytes":9999,"billingMode":"sum_rx_tx"}}`
+	t.Setenv("VPS_TRAFFIC_CONFIG", cfg)
+	m := NewVPSTrafficManager(dir)
+
+	dbTraffic := &VPSTrafficNodeConfig{}
+	nc := m.getNodeConfig("sys1", "node1", dbTraffic)
+	if nc.ResetDay != 5 {
+		t.Errorf("empty DB resetDay should not override: got %d", nc.ResetDay)
+	}
+	if nc.QuotaBytes != 9999 {
+		t.Errorf("empty DB quota should not override: got %d", nc.QuotaBytes)
+	}
+	if nc.BillingMode != BillingModeSumRxTx {
+		t.Errorf("empty DB billingMode should not override: got %s", nc.BillingMode)
+	}
+}
+
+func TestDeriveTrafficWithDBConfig(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1,"billingMode":"max_rx_tx","quotaBytes":1000000}}`)
+	m := NewVPSTrafficManager(dir)
+
+	dbTraffic := &VPSTrafficNodeConfig{ResetDay: 16, BillingMode: "tx_only"}
+
+	ni := map[string][4]uint64{"eth0": {0, 0, 100_000, 200_000}}
+	m.DeriveTraffic("sys1", "us", dbTraffic, ni)
+
+	ni2 := map[string][4]uint64{"eth0": {0, 0, 150_000, 300_000}}
+	info := m.DeriveTraffic("sys1", "us", dbTraffic, ni2)
+	if info.ResetDay != 16 {
+		t.Errorf("expected DB resetDay=16, got %d", info.ResetDay)
+	}
+	if info.BillingMode != BillingModeTxOnly {
+		t.Errorf("expected DB billingMode tx_only, got %s", info.BillingMode)
+	}
+	if info.BillableBytes != 50_000 {
+		t.Errorf("tx_only billable should be 50000 (cycleTx), got %d", info.BillableBytes)
+	}
+	if info.QuotaBytes != 1_000_000 {
+		t.Errorf("quota should inherit from env default, got %d", info.QuotaBytes)
 	}
 }
 

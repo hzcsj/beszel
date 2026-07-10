@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { isReadOnlyUser, pb } from "@/lib/api"
 import { SystemStatus } from "@/lib/enums"
@@ -71,6 +72,18 @@ export const SystemDialog = ({ setOpen, system }: { setOpen: (open: boolean) => 
 	const isUnixSocket = hostValue.startsWith("/")
 	const [tab, setTab] = useBrowserStorage("as-tab", "docker")
 	const [token, setToken] = useState(system?.token ?? "")
+	const initTraffic = system?.vps?.traffic
+	const [vpsResetDay, setVpsResetDay] = useState(initTraffic?.resetDay?.toString() ?? "")
+	const [vpsQuota, setVpsQuota] = useState(() => {
+		if (!initTraffic?.quotaBytes) return ""
+		return initTraffic.quotaBytes >= 1099511627776
+			? (initTraffic.quotaBytes / 1099511627776).toString()
+			: (initTraffic.quotaBytes / 1073741824).toString()
+	})
+	const [vpsQuotaUnit, setVpsQuotaUnit] = useState(
+		initTraffic?.quotaBytes && initTraffic.quotaBytes >= 1099511627776 ? "tib" : "gib"
+	)
+	const [vpsBillingMode, setVpsBillingMode] = useState(initTraffic?.billingMode || "__inherit__")
 
 	useEffect(() => {
 		;(async () => {
@@ -96,6 +109,24 @@ export const SystemDialog = ({ setOpen, system }: { setOpen: (open: boolean) => 
 		const formData = new FormData(e.target as HTMLFormElement)
 		const data = Object.fromEntries(formData) as Record<string, any>
 		data.users = pb.authStore.record!.id
+		const vpsTraffic: Record<string, number | string> = {}
+		const rd = parseInt(vpsResetDay, 10)
+		if (rd > 0) vpsTraffic.resetDay = Math.min(Math.max(rd, 1), 28)
+		const qv = parseFloat(vpsQuota)
+		if (qv > 0) {
+			vpsTraffic.quotaBytes = vpsQuotaUnit === "tib" ? Math.round(qv * 1099511627776) : Math.round(qv * 1073741824)
+		}
+		if (vpsBillingMode && vpsBillingMode !== "__inherit__") {
+			vpsTraffic.billingMode = vpsBillingMode
+		}
+		if (Object.keys(vpsTraffic).length > 0) {
+			data.vps = { ...(system?.vps ?? {}), traffic: vpsTraffic }
+		} else if (system?.vps) {
+			const { traffic: _, ...rest } = system.vps
+			data.vps = Object.keys(rest).length > 0 ? rest : null
+		} else {
+			data.vps = null
+		}
 		try {
 			setOpen(false)
 			if (system) {
@@ -212,6 +243,61 @@ export const SystemDialog = ({ setOpen, system }: { setOpen: (open: boolean) => 
 							<Trans>Token</Trans>
 						</Label>
 						<InputCopy value={token} id="tkn" name="tkn" />
+						<div className="xs:col-span-2 border-t pt-3 mt-1">
+							<span className="text-xs text-muted-foreground uppercase tracking-wide">
+								<Trans>VPS Traffic</Trans>
+							</span>
+						</div>
+						<Label htmlFor="vpsResetDay" className="xs:text-end">
+							<Trans>Reset day</Trans>
+						</Label>
+						<Input
+							id="vpsResetDay"
+							type="number"
+							min={1}
+							max={28}
+							value={vpsResetDay}
+							onChange={(e) => setVpsResetDay(e.target.value)}
+							placeholder="1"
+						/>
+						<Label htmlFor="vpsQuota" className="xs:text-end">
+							<Trans>Quota</Trans>
+						</Label>
+						<div className="flex gap-2">
+							<Input
+								id="vpsQuota"
+								type="number"
+								min={0}
+								step="any"
+								value={vpsQuota}
+								onChange={(e) => setVpsQuota(e.target.value)}
+								className="flex-1"
+							/>
+							<Select value={vpsQuotaUnit} onValueChange={setVpsQuotaUnit}>
+								<SelectTrigger className="w-20">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="gib">GiB</SelectItem>
+									<SelectItem value="tib">TiB</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+						<Label className="xs:text-end">
+							<Trans>Billing mode</Trans>
+						</Label>
+						<Select value={vpsBillingMode} onValueChange={setVpsBillingMode}>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="__inherit__">{t`Inherit default`}</SelectItem>
+								<SelectItem value="max_rx_tx">{t`Max of download/upload`}</SelectItem>
+								<SelectItem value="sum_rx_tx">{t`Download + upload`}</SelectItem>
+								<SelectItem value="tx_only">{t`Upload only`}</SelectItem>
+								<SelectItem value="rx_only">{t`Download only`}</SelectItem>
+							</SelectContent>
+						</Select>
 					</div>
 					<DialogFooter className="flex justify-end gap-x-2 gap-y-3 flex-col mt-5">
 						{/* Docker */}

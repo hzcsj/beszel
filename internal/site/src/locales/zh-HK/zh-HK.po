@@ -283,6 +283,15 @@ msgid "Beszel uses <0>Shoutrrr</0> to integrate with popular notification servic
 msgstr "Beszel 使用 <0>Shoutrrr</0> 與流行的通知服務集成。"
 
 #: src/components/add-system.tsx
+msgid "Billing mode"
+msgstr "計費模式"
+
+#: src/components/systems-table/systems-table-columns.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Billing mode: {modeLabel}"
+msgstr "計費模式: {modeLabel}"
+
+#: src/components/add-system.tsx
 msgid "Binary"
 msgstr "執行檔"
 
@@ -551,6 +560,19 @@ msgstr "累計上傳"
 msgid "Current state"
 msgstr "目前狀態"
 
+#. placeholder {0}: vt.cs
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Cycle start: {0}"
+msgstr "賬期起始: {0}"
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Cycle Traffic"
+msgstr "週期流量"
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Cycle traffic: ↓{crxStr} / ↑{ctxStr}"
+msgstr "週期流量: ↓{crxStr} / ↑{ctxStr}"
+
 #. Power Cycles
 #: src/components/routes/system/smart-table.tsx
 msgid "Cycles"
@@ -560,6 +582,12 @@ msgstr "週期"
 #: src/components/routes/settings/quiet-hours.tsx
 msgid "Daily"
 msgstr "每日"
+
+#. placeholder {0}: vt.dl
+#: src/components/systems-table/systems-table-columns.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Days left: {0}"
+msgstr "剩餘天數: {0}"
 
 #: src/components/routes/system/info-bar.tsx
 msgctxt "Default system layout option"
@@ -658,6 +686,16 @@ msgstr "中斷 ({downSystemsLength})"
 #: src/components/routes/system/network-sheet.tsx
 msgid "Download"
 msgstr "下載"
+
+#: src/components/add-system.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Download + upload"
+msgstr "下載 + 上傳"
+
+#: src/components/add-system.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Download only"
+msgstr "僅下載"
 
 #: src/components/alerts-history-columns.tsx
 msgid "Duration"
@@ -943,6 +981,10 @@ msgstr "鏡像"
 msgid "Inactive"
 msgstr "未啟用"
 
+#: src/components/add-system.tsx
+msgid "Inherit default"
+msgstr "繼承預設"
+
 #: src/components/routes/settings/heartbeat.tsx
 msgid "Interval"
 msgstr "間隔"
@@ -1043,6 +1085,11 @@ msgstr "手動設定說明"
 #: src/components/routes/system/chart-card.tsx
 msgid "Max 1 min"
 msgstr "一分鐘內最大值"
+
+#: src/components/add-system.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Max of download/upload"
+msgstr "下載/上傳取最大值"
 
 #: src/components/containers-table/containers-table-columns.tsx
 #: src/components/routes/system/info-bar.tsx
@@ -1310,6 +1357,11 @@ msgstr "首選語言"
 msgid "Process started"
 msgstr "進程啟動"
 
+#: src/components/systems-table/systems-table-columns.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Projected: {projStr}"
+msgstr "預估: {projStr}"
+
 #. Use 'Key' if your language requires many more characters
 #: src/components/add-system.tsx
 msgid "Public Key"
@@ -1323,6 +1375,15 @@ msgstr "隊列深度"
 #: src/components/routes/settings/quiet-hours.tsx
 msgid "Quiet Hours"
 msgstr "靜音時段"
+
+#: src/components/add-system.tsx
+msgid "Quota"
+msgstr "配額"
+
+#: src/components/systems-table/systems-table-columns.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Quota: {quotaStr} ({pctStr}%)"
+msgstr "配額: {quotaStr} ({pctStr}%)"
 
 #. Disk read
 #: src/components/routes/system/charts/disk-charts.tsx
@@ -1361,6 +1422,15 @@ msgstr "被需要"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Requires"
 msgstr "需要"
+
+#: src/components/add-system.tsx
+msgid "Reset day"
+msgstr "重置日"
+
+#. placeholder {0}: vt.rd
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Reset day: {0}"
+msgstr "重置日: {0}"
 
 #: src/components/login/forgot-pass-form.tsx
 msgid "Reset Password"
@@ -1703,14 +1773,18 @@ msgctxt "Disk I/O"
 msgid "Total time spent on read/write (can exceed 100%)"
 msgstr ""
 
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Total Traffic"
+msgstr "總流量"
+
 #. placeholder {0}: data.length
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Total: {0}"
 msgstr "總計: {0}"
 
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Traffic"
-msgstr ""
+#~ msgid "Traffic"
+#~ msgstr ""
 
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Triggered by"
@@ -1822,6 +1896,11 @@ msgstr "每 10 分鐘更新一次。"
 msgid "Upload"
 msgstr "上傳"
 
+#: src/components/add-system.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Upload only"
+msgstr "僅上傳"
+
 #: src/components/routes/system/info-bar.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Uptime"
@@ -1875,6 +1954,10 @@ msgstr "檢視最近 200 則警報。"
 #: src/components/systems-table/systems-table.tsx
 msgid "Visible Fields"
 msgstr "可見欄位"
+
+#: src/components/add-system.tsx
+msgid "VPS Traffic"
+msgstr "VPS 流量"
 
 #: src/components/routes/system/chart-card.tsx
 msgid "Waiting for enough records to display"

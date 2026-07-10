@@ -85,6 +85,21 @@ function getMeterStateByThresholds(value: number, warn = 65, crit = 90): MeterSt
 	return value >= crit ? MeterState.Crit : value >= warn ? MeterState.Warn : MeterState.Good
 }
 
+function billingModeLabel(mode: string): string {
+	switch (mode) {
+		case "max_rx_tx":
+			return t`Max of download/upload`
+		case "sum_rx_tx":
+			return t`Download + upload`
+		case "tx_only":
+			return t`Upload only`
+		case "rx_only":
+			return t`Download only`
+		default:
+			return mode
+	}
+}
+
 /**
  * @param viewMode - "table" or "grid"
  * @returns - Column definitions for the systems table
@@ -262,9 +277,70 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			},
 		},
 		{
+			accessorFn: ({ info }) => (info.vt ? (info.vt.trx ?? 0) + (info.vt.ttx ?? 0) : undefined),
+			id: "totalTraffic",
+			name: () => t`Total Traffic`,
+			size: 0,
+			Icon: ArrowDownUpIcon,
+			header: sortableHeader,
+			sortUndefined: "last",
+			cell(info) {
+				const vt = info.row.original.info.vt
+				if (!vt) {
+					return null
+				}
+				const rx = formatBytes(vt.trx ?? 0)
+				const tx = formatBytes(vt.ttx ?? 0)
+
+				const tooltipLines: string[] = []
+				if (vt.cs) tooltipLines.push(t`Cycle start: ${vt.cs}`)
+				if (vt.rd) tooltipLines.push(t`Reset day: ${vt.rd}`)
+				if (vt.dl !== undefined) tooltipLines.push(t`Days left: ${vt.dl}`)
+				const crx = formatBytes(vt.crx ?? 0)
+				const ctx = formatBytes(vt.ctx ?? 0)
+				const crxStr = `${decimalString(crx.value, 2)} ${crx.unit}`
+				const ctxStr = `${decimalString(ctx.value, 2)} ${ctx.unit}`
+				tooltipLines.push(t`Cycle traffic: ↓${crxStr} / ↑${ctxStr}`)
+				if (vt.quota) {
+					const quotaPct = ((vt.bill ?? 0) / vt.quota) * 100
+					const q = formatBytes(vt.quota)
+					const quotaStr = `${decimalString(q.value, 2)} ${q.unit}`
+					const pctStr = decimalString(quotaPct, 1)
+					tooltipLines.push(t`Quota: ${quotaStr} (${pctStr}%)`)
+				}
+				if (vt.proj) {
+					const p = formatBytes(vt.proj)
+					const projStr = `${decimalString(p.value, 2)} ${p.unit}`
+					tooltipLines.push(t`Projected: ${projStr}`)
+				}
+				if (vt.mode) {
+					const modeLabel = billingModeLabel(vt.mode)
+					tooltipLines.push(t`Billing mode: ${modeLabel}`)
+				}
+
+				return (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<span className="tabular-nums whitespace-nowrap">
+								↓{decimalString(rx.value, rx.value >= 100 ? 1 : 2)} {rx.unit} | ↑
+								{decimalString(tx.value, tx.value >= 100 ? 1 : 2)} {tx.unit}
+							</span>
+						</TooltipTrigger>
+						<TooltipContent side="bottom" className="max-w-xs">
+							<div className="grid gap-0.5 text-xs">
+								{tooltipLines.map((line, i) => (
+									<span key={i}>{line}</span>
+								))}
+							</div>
+						</TooltipContent>
+					</Tooltip>
+				)
+			},
+		},
+		{
 			accessorFn: ({ info }) => (info.vt ? (info.vt.bill ?? 0) : undefined),
-			id: "traffic",
-			name: () => t`Traffic`,
+			id: "cycleTraffic",
+			name: () => t`Cycle Traffic`,
 			size: 0,
 			Icon: ArrowDownUpIcon,
 			header: sortableHeader,
@@ -282,33 +358,37 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 				const warnClass = quotaPct >= 90 ? "text-red-500" : quotaPct >= 80 || projPct > 100 ? "text-yellow-500" : ""
 
 				const tooltipLines: string[] = []
-				if (vt.cs) tooltipLines.push(`Cycle: ${vt.cs}`)
-				if (vt.rd) tooltipLines.push(`Reset day: ${vt.rd}`)
-				if (vt.dl !== undefined) tooltipLines.push(`Days left: ${vt.dl}`)
-				tooltipLines.push(`Cycle ↓${decimalString(rx.value, 2)} ${rx.unit} / ↑${decimalString(tx.value, 2)} ${tx.unit}`)
-				const trx = formatBytes(vt.trx ?? 0)
-				const ttx = formatBytes(vt.ttx ?? 0)
-				tooltipLines.push(
-					`Total ↓${decimalString(trx.value, 2)} ${trx.unit} / ↑${decimalString(ttx.value, 2)} ${ttx.unit}`
-				)
 				if (vt.quota) {
 					const q = formatBytes(vt.quota)
-					tooltipLines.push(`Quota: ${decimalString(q.value, 2)} ${q.unit} (${decimalString(quotaPct, 1)}%)`)
+					const quotaStr = `${decimalString(q.value, 2)} ${q.unit}`
+					const pctStr = decimalString(quotaPct, 1)
+					tooltipLines.push(t`Quota: ${quotaStr} (${pctStr}%)`)
 				}
 				if (vt.proj) {
 					const p = formatBytes(vt.proj)
-					tooltipLines.push(`Projected: ${decimalString(p.value, 2)} ${p.unit}`)
+					const projStr = `${decimalString(p.value, 2)} ${p.unit}`
+					tooltipLines.push(t`Projected: ${projStr}`)
 				}
-				if (vt.mode) tooltipLines.push(`Mode: ${vt.mode}`)
+				if (vt.dl !== undefined) tooltipLines.push(t`Days left: ${vt.dl}`)
+				if (vt.mode) {
+					const modeLabel = billingModeLabel(vt.mode)
+					tooltipLines.push(t`Billing mode: ${modeLabel}`)
+				}
+
+				const content = (
+					<span className={cn("tabular-nums whitespace-nowrap", warnClass)}>
+						↓{decimalString(rx.value, rx.value >= 100 ? 1 : 2)} {rx.unit} | ↑
+						{decimalString(tx.value, tx.value >= 100 ? 1 : 2)} {tx.unit}
+					</span>
+				)
+
+				if (tooltipLines.length === 0) {
+					return content
+				}
 
 				return (
 					<Tooltip>
-						<TooltipTrigger asChild>
-							<span className={cn("tabular-nums whitespace-nowrap", warnClass)}>
-								↓{decimalString(rx.value, rx.value >= 100 ? 1 : 2)} {rx.unit} | ↑
-								{decimalString(tx.value, tx.value >= 100 ? 1 : 2)} {tx.unit}
-							</span>
-						</TooltipTrigger>
+						<TooltipTrigger asChild>{content}</TooltipTrigger>
 						<TooltipContent side="bottom" className="max-w-xs">
 							<div className="grid gap-0.5 text-xs">
 								{tooltipLines.map((line, i) => (

@@ -23,12 +23,23 @@ export interface FingerprintRecord extends RecordModel {
 	}
 }
 
+export interface VPSTrafficSettings {
+	resetDay?: number
+	quotaBytes?: number
+	billingMode?: string
+}
+
+export interface VPSSystemSettings {
+	traffic?: VPSTrafficSettings
+}
+
 export interface SystemRecord extends RecordModel {
 	name: string
 	host: string
 	status: "up" | "down" | "paused" | "pending"
 	port: string
 	info: SystemInfo
+	vps?: VPSSystemSettings
 	v: string
 	updated: string
 }

@@ -283,6 +283,15 @@ msgid "Beszel uses <0>Shoutrrr</0> to integrate with popular notification servic
 msgstr "Beszel utilise <0>Shoutrrr</0> pour s'intégrer aux services de notification populaires."
 
 #: src/components/add-system.tsx
+msgid "Billing mode"
+msgstr ""
+
+#: src/components/systems-table/systems-table-columns.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Billing mode: {modeLabel}"
+msgstr ""
+
+#: src/components/add-system.tsx
 msgid "Binary"
 msgstr "Binaire"
 
@@ -551,6 +560,19 @@ msgstr "Téléversement cumulatif"
 msgid "Current state"
 msgstr "État actuel"
 
+#. placeholder {0}: vt.cs
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Cycle start: {0}"
+msgstr ""
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Cycle Traffic"
+msgstr ""
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Cycle traffic: ↓{crxStr} / ↑{ctxStr}"
+msgstr ""
+
 #. Power Cycles
 #: src/components/routes/system/smart-table.tsx
 msgid "Cycles"
@@ -560,6 +582,12 @@ msgstr ""
 #: src/components/routes/settings/quiet-hours.tsx
 msgid "Daily"
 msgstr "Quotidien"
+
+#. placeholder {0}: vt.dl
+#: src/components/systems-table/systems-table-columns.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Days left: {0}"
+msgstr ""
 
 #: src/components/routes/system/info-bar.tsx
 msgctxt "Default system layout option"
@@ -658,6 +686,16 @@ msgstr "Injoignable ({downSystemsLength})"
 #: src/components/routes/system/network-sheet.tsx
 msgid "Download"
 msgstr "Télécharger"
+
+#: src/components/add-system.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Download + upload"
+msgstr ""
+
+#: src/components/add-system.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Download only"
+msgstr ""
 
 #: src/components/alerts-history-columns.tsx
 msgid "Duration"
@@ -943,6 +981,10 @@ msgstr ""
 msgid "Inactive"
 msgstr "Inactif"
 
+#: src/components/add-system.tsx
+msgid "Inherit default"
+msgstr ""
+
 #: src/components/routes/settings/heartbeat.tsx
 msgid "Interval"
 msgstr "Intervalle"
@@ -1042,6 +1084,11 @@ msgstr "Guide pour une installation manuelle"
 #. Chart select field. Please try to keep this short.
 #: src/components/routes/system/chart-card.tsx
 msgid "Max 1 min"
+msgstr ""
+
+#: src/components/add-system.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Max of download/upload"
 msgstr ""
 
 #: src/components/containers-table/containers-table-columns.tsx
@@ -1310,6 +1357,11 @@ msgstr "Langue préférée"
 msgid "Process started"
 msgstr "Processus démarré"
 
+#: src/components/systems-table/systems-table-columns.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Projected: {projStr}"
+msgstr ""
+
 #. Use 'Key' if your language requires many more characters
 #: src/components/add-system.tsx
 msgid "Public Key"
@@ -1323,6 +1375,15 @@ msgstr "Profondeur de file d'attente"
 #: src/components/routes/settings/quiet-hours.tsx
 msgid "Quiet Hours"
 msgstr "Heures calmes"
+
+#: src/components/add-system.tsx
+msgid "Quota"
+msgstr ""
+
+#: src/components/systems-table/systems-table-columns.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Quota: {quotaStr} ({pctStr}%)"
+msgstr ""
 
 #. Disk read
 #: src/components/routes/system/charts/disk-charts.tsx
@@ -1361,6 +1422,15 @@ msgstr "Requis par"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Requires"
 msgstr "Requiert"
+
+#: src/components/add-system.tsx
+msgid "Reset day"
+msgstr ""
+
+#. placeholder {0}: vt.rd
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Reset day: {0}"
+msgstr ""
 
 #: src/components/login/forgot-pass-form.tsx
 msgid "Reset Password"
@@ -1703,14 +1773,18 @@ msgctxt "Disk I/O"
 msgid "Total time spent on read/write (can exceed 100%)"
 msgstr ""
 
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Total Traffic"
+msgstr ""
+
 #. placeholder {0}: data.length
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Total: {0}"
 msgstr "Total : {0}"
 
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Traffic"
-msgstr ""
+#~ msgid "Traffic"
+#~ msgstr ""
 
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Triggered by"
@@ -1822,6 +1896,11 @@ msgstr "Mis à jour toutes les 10 minutes."
 msgid "Upload"
 msgstr "Téléverser"
 
+#: src/components/add-system.tsx
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Upload only"
+msgstr ""
+
 #: src/components/routes/system/info-bar.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Uptime"
@@ -1875,6 +1954,10 @@ msgstr "Voir vos 200 dernières alertes."
 #: src/components/systems-table/systems-table.tsx
 msgid "Visible Fields"
 msgstr "Colonnes visibles"
+
+#: src/components/add-system.tsx
+msgid "VPS Traffic"
+msgstr ""
 
 #: src/components/routes/system/chart-card.tsx
 msgid "Waiting for enough records to display"
