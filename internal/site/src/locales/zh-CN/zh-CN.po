@@ -1026,6 +1026,11 @@ msgstr "生命周期"
 msgid "limit"
 msgstr "限制"
 
+#. Short label for load average in All Systems list
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Load"
+msgstr "负载"
+
 #: src/components/routes/system/charts/load-average-chart.tsx
 msgid "Load Average"
 msgstr "系统负载"
@@ -1042,11 +1047,6 @@ msgstr "1 分钟负载平均值"
 msgid "Load Average 5m"
 msgstr "5 分钟内的平均负载"
 
-#. Short label for load average
-#: src/components/systems-table/systems-table-columns.tsx
-msgid "Load Avg"
-msgstr "负载"
-
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Load state"
 msgstr "加载状态"
@@ -1055,6 +1055,7 @@ msgstr "加载状态"
 msgid "Loading..."
 msgstr "加载中..."
 
+#: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 #: src/components/systems-table/systems-table-columns.tsx
@@ -1177,6 +1178,10 @@ msgstr "网络单位"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "No"
 msgstr "否"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "No data for selected filter"
+msgstr "所选过滤无数据"
 
 #: src/components/routes/system/charts/probe-charts.tsx
 msgid "No probe data"

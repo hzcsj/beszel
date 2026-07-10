@@ -1026,6 +1026,11 @@ msgstr "Yaşam döngüsü"
 msgid "limit"
 msgstr "Sınır"
 
+#. Short label for load average in All Systems list
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Load"
+msgstr ""
+
 #: src/components/routes/system/charts/load-average-chart.tsx
 msgid "Load Average"
 msgstr "Yük Ortalaması"
@@ -1044,8 +1049,8 @@ msgstr "Yük Ortalaması 5d"
 
 #. Short label for load average
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Load Avg"
-msgstr "Yük Ort."
+#~ msgid "Load Avg"
+#~ msgstr "Yük Ort."
 
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Load state"
@@ -1055,6 +1060,7 @@ msgstr "Yükleme durumu"
 msgid "Loading..."
 msgstr "Yükleniyor..."
 
+#: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 #: src/components/systems-table/systems-table-columns.tsx
@@ -1177,6 +1183,10 @@ msgstr "Ağ birimi"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "No"
 msgstr "Hayır"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "No data for selected filter"
+msgstr ""
 
 #: src/components/routes/system/charts/probe-charts.tsx
 msgid "No probe data"

@@ -35,9 +35,11 @@ import {
 	decimalString,
 	formatBytes,
 	formatTemperature,
+	getHostDisplayValue,
 	parseSemVer,
 	secondsToUptimeString,
 } from "@/lib/utils"
+import { formatLoad } from "@/lib/format-load"
 import { batteryStateTranslations } from "@/lib/i18n"
 import type { SystemRecord } from "@/types"
 import { SystemDialog } from "../add-system"
@@ -151,33 +153,40 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			invertSorting: false,
 			Icon: ServerIcon,
 			cell: (info) => {
-				const { name, id } = info.row.original
+				const system = info.row.original
+				const { name, id } = system
 				const longestName = useStore($longestSystemNameLen)
 				const linkUrl = getPagePath($router, "system", { id })
+				const hostDisplay = getHostDisplayValue(system)
 
 				return (
 					<>
 						<span className="flex gap-2 items-center font-medium text-sm text-nowrap md:ps-1">
-							<IndicatorDot system={info.row.original} />
-							<Link
-								href={linkUrl}
-								tabIndex={-1}
-								className="truncate z-10 relative"
-								style={{ width: `${longestName / 1.05}ch` }}
-								onMouseEnter={(e) => {
-									// set title on hover if text is truncated to show full name
-									const a = e.currentTarget
-									if (a.scrollWidth > a.clientWidth) {
-										a.title = name
-									} else {
-										a.removeAttribute("title")
-									}
-								}}
-							>
-								{name}
-							</Link>
+							<IndicatorDot system={system} />
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Link
+										href={linkUrl}
+										className="truncate z-10 relative"
+										style={{ width: `${longestName / 1.05}ch` }}
+										onMouseEnter={(e) => {
+											const a = e.currentTarget
+											if (a.scrollWidth > a.clientWidth) {
+												a.title = name
+											} else {
+												a.removeAttribute("title")
+											}
+										}}
+									>
+										{name}
+									</Link>
+								</TooltipTrigger>
+								<TooltipContent side="bottom" className="font-mono text-xs">
+									{hostDisplay}
+								</TooltipContent>
+							</Tooltip>
 						</span>
-						<Link href={linkUrl} className="inset-0 absolute size-full" aria-label={name}></Link>
+						<Link href={linkUrl} tabIndex={-1} className="inset-0 absolute size-full" aria-label={name} />
 					</>
 				)
 			},
@@ -187,16 +196,15 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			accessorFn: ({ info }) => info.cpu || undefined,
 			id: "cpu",
 			name: () => t`CPU`,
-			cell: TableCellWithMeter,
+			cell: viewMode === "table" ? TableCellEmbeddedMeter : TableCellWithMeter,
 			Icon: CpuIcon,
 			header: sortableHeader,
 		},
 		{
-			// accessorKey: "info.mp",
 			accessorFn: ({ info }) => info.mp || undefined,
 			id: "memory",
 			name: () => t`Memory`,
-			cell: TableCellWithMeter,
+			cell: viewMode === "table" ? TableCellEmbeddedMeter : TableCellWithMeter,
 			Icon: MemoryStickIcon,
 			header: sortableHeader,
 		},
@@ -205,7 +213,11 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			id: "disk",
 			name: () => t`Disk`,
 			cell: (info: CellContext<SystemRecord, unknown>) =>
-				info.row.original.info.efs ? DiskCellWithMultiple(info) : TableCellWithMeter(info),
+				info.row.original.info.efs
+					? DiskCellWithMultiple(info, viewMode)
+					: viewMode === "table"
+						? TableCellEmbeddedMeter(info)
+						: TableCellWithMeter(info),
 			Icon: HardDriveIcon,
 			header: sortableHeader,
 		},
@@ -220,7 +232,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 		{
 			id: "loadAverage",
 			accessorFn: ({ info }) => info.la?.[0],
-			name: () => t({ message: "Load Avg", comment: "Short label for load average" }),
+			name: () => t({ message: "Load", comment: "Short label for load average in All Systems list" }),
 			size: 0,
 			Icon: HourglassIcon,
 			header: sortableHeader,
@@ -248,7 +260,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 								[STATUS_COLORS[SystemStatus.Paused]]: status !== SystemStatus.Up,
 							})}
 						/>
-						<span>{compactSig3(load1)}</span>
+						<span>{formatLoad(load1)}</span>
 					</div>
 				)
 			},
@@ -736,7 +748,43 @@ function TableCellWithMeter(info: CellContext<SystemRecord, unknown>) {
 	)
 }
 
-function DiskCellWithMultiple(info: CellContext<SystemRecord, unknown>) {
+function TableCellEmbeddedMeter(info: CellContext<SystemRecord, unknown>) {
+	const { colorWarn = 65, colorCrit = 90 } = useStore($userSettings, { keys: ["colorWarn", "colorCrit"] })
+	const val = Number(info.getValue()) || 0
+	const threshold = getMeterStateByThresholds(val, colorWarn, colorCrit)
+	const fillClass = cn(
+		"absolute inset-0",
+		(info.row.original.status !== SystemStatus.Up && STATUS_COLORS.paused) ||
+			(threshold === MeterState.Good && STATUS_COLORS.up) ||
+			(threshold === MeterState.Warn && STATUS_COLORS.pending) ||
+			STATUS_COLORS.down
+	)
+	const label = `${decimalString(val, val >= 10 ? 1 : 2)}%`
+	const clampedWidth = Math.min(Math.max(val, 0), 100)
+
+	return (
+		<div
+			className="relative w-full bg-muted h-6 rounded-sm overflow-hidden tabular-nums tracking-tight"
+			role="progressbar"
+			aria-valuenow={Math.round(clampedWidth)}
+			aria-valuemin={0}
+			aria-valuemax={100}
+			aria-label={label}
+		>
+			<span className={fillClass} style={{ width: `${clampedWidth}%` }} />
+			<span className="absolute inset-0 flex items-center justify-center text-xs pointer-events-none">{label}</span>
+			<span
+				aria-hidden="true"
+				className="absolute inset-0 flex items-center justify-center text-xs text-black pointer-events-none"
+				style={{ clipPath: `inset(0 ${100 - clampedWidth}% 0 0)` }}
+			>
+				{label}
+			</span>
+		</div>
+	)
+}
+
+function DiskCellWithMultiple(info: CellContext<SystemRecord, unknown>, viewMode: "table" | "grid") {
 	const { colorWarn = 65, colorCrit = 90 } = useStore($userSettings, { keys: ["colorWarn", "colorCrit"] })
 	const { info: sysInfo, status, id } = info.row.original
 	const extraFs = Object.entries(sysInfo.efs ?? {})
@@ -776,23 +824,57 @@ function DiskCellWithMultiple(info: CellContext<SystemRecord, unknown>) {
 					tabIndex={-1}
 					className="flex flex-col gap-0.5 w-full relative z-10"
 				>
-					<div className="flex gap-2 items-center tabular-nums tracking-tight">
-						<span className="min-w-8 shrink-0">{decimalString(rootDiskPct, rootDiskPct >= 10 ? 1 : 2)}%</span>
-						<span className="flex-1 min-w-8 flex items-center gap-0.5 px-1 justify-end bg-muted h-[1em] rounded-sm overflow-hidden relative">
-							{/* Root disk */}
+					{viewMode === "table" ? (
+						<div
+							className="relative w-full bg-muted h-6 rounded-sm overflow-hidden tabular-nums tracking-tight"
+							role="progressbar"
+							aria-valuenow={Math.round(Math.min(Math.max(rootDiskPct, 0), 100))}
+							aria-valuemin={0}
+							aria-valuemax={100}
+							aria-label={`${decimalString(rootDiskPct, rootDiskPct >= 10 ? 1 : 2)}%`}
+						>
 							<span
 								className={cn("absolute inset-0", getMeterClass(rootDiskPct))}
-								style={{ width: `${rootDiskPct}%` }}
-							></span>
-							{/* Extra disk indicators */}
-							{extraDiskIndicators.map((color) => (
+								style={{ width: `${Math.min(Math.max(rootDiskPct, 0), 100)}%` }}
+							/>
+							<span className="absolute inset-0 flex items-center justify-center text-xs pointer-events-none">
+								{decimalString(rootDiskPct, rootDiskPct >= 10 ? 1 : 2)}%
+							</span>
+							<span
+								aria-hidden="true"
+								className="absolute inset-0 flex items-center justify-center text-xs text-black pointer-events-none"
+								style={{ clipPath: `inset(0 ${100 - Math.min(Math.max(rootDiskPct, 0), 100)}% 0 0)` }}
+							>
+								{decimalString(rootDiskPct, rootDiskPct >= 10 ? 1 : 2)}%
+							</span>
+							{extraDiskIndicators.length > 0 && (
+								<span className="absolute inset-y-0 end-1 flex items-center gap-0.5">
+									{extraDiskIndicators.map((color) => (
+										<span
+											key={color}
+											className={cn("size-1.5 rounded-full shrink-0 outline-[0.5px] outline-muted", color)}
+										/>
+									))}
+								</span>
+							)}
+						</div>
+					) : (
+						<div className="flex gap-2 items-center tabular-nums tracking-tight">
+							<span className="min-w-8 shrink-0">{decimalString(rootDiskPct, rootDiskPct >= 10 ? 1 : 2)}%</span>
+							<span className="flex-1 min-w-8 flex items-center gap-0.5 px-1 justify-end bg-muted h-[1em] rounded-sm overflow-hidden relative">
 								<span
-									key={color}
-									className={cn("size-1.5 rounded-full shrink-0 outline-[0.5px] outline-muted", color)}
+									className={cn("absolute inset-0", getMeterClass(rootDiskPct))}
+									style={{ width: `${rootDiskPct}%` }}
 								/>
-							))}
-						</span>
-					</div>
+								{extraDiskIndicators.map((color) => (
+									<span
+										key={color}
+										className={cn("size-1.5 rounded-full shrink-0 outline-[0.5px] outline-muted", color)}
+									/>
+								))}
+							</span>
+						</div>
+					)}
 				</Link>
 			</TooltipTrigger>
 			<TooltipContent side="right" className="max-w-xs pb-2">

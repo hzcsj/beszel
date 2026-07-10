@@ -1026,6 +1026,11 @@ msgstr "Životní cyklus"
 msgid "limit"
 msgstr ""
 
+#. Short label for load average in All Systems list
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Load"
+msgstr ""
+
 #: src/components/routes/system/charts/load-average-chart.tsx
 msgid "Load Average"
 msgstr "Průměrné vytížení"
@@ -1044,8 +1049,8 @@ msgstr "Průměrná zátěž 5m"
 
 #. Short label for load average
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Load Avg"
-msgstr "Prům. zatížení"
+#~ msgid "Load Avg"
+#~ msgstr "Prům. zatížení"
 
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Load state"
@@ -1055,6 +1060,7 @@ msgstr "Stav načtení"
 msgid "Loading..."
 msgstr "Načítání..."
 
+#: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 #: src/components/systems-table/systems-table-columns.tsx
@@ -1177,6 +1183,10 @@ msgstr "Síťová jednotka"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "No"
 msgstr "Ne"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "No data for selected filter"
+msgstr ""
 
 #: src/components/routes/system/charts/probe-charts.tsx
 msgid "No probe data"

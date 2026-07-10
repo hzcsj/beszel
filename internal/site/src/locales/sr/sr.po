@@ -1026,6 +1026,11 @@ msgstr "Животни циклус"
 msgid "limit"
 msgstr "ограничење"
 
+#. Short label for load average in All Systems list
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Load"
+msgstr ""
+
 #: src/components/routes/system/charts/load-average-chart.tsx
 msgid "Load Average"
 msgstr "Просечно оптерећење"
@@ -1044,8 +1049,8 @@ msgstr "Просечно оптерећење 5м"
 
 #. Short label for load average
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Load Avg"
-msgstr "Просечно опт."
+#~ msgid "Load Avg"
+#~ msgstr "Просечно опт."
 
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Load state"
@@ -1055,6 +1060,7 @@ msgstr "Стање учитавања"
 msgid "Loading..."
 msgstr "Учитавање..."
 
+#: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 #: src/components/systems-table/systems-table-columns.tsx
@@ -1177,6 +1183,10 @@ msgstr "Мрежна јединица"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "No"
 msgstr "Не"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "No data for selected filter"
+msgstr ""
 
 #: src/components/routes/system/charts/probe-charts.tsx
 msgid "No probe data"

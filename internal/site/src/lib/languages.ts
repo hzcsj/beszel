@@ -1,10 +1,10 @@
 export default [
+	["en", "English", "🇬🇧"],
 	["ar", "العربية", "🇵🇸"],
 	["bg", "Български", "🇧🇬"],
 	["cs", "Čeština", "🇨🇿"],
 	["da", "Dansk", "🇩🇰"],
 	["de", "Deutsch", "🇩🇪"],
-	["en", "English", "🇬🇧"],
 	["es", "Español", "🇪🇸"],
 	["fa", "فارسی", "🇮🇷"],
 	["fr", "Français", "🇫🇷"],
@@ -28,5 +28,4 @@ export default [
 	["vi", "Tiếng Việt", "🇻🇳"],
 	["zh-CN", "简体中文", "🇨🇳"],
 	["zh-HK", "繁體中文", "🇭🇰"],
-	["zh", "繁體中文", "🇹🇼"],
 ] as const

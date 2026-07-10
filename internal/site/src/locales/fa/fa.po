@@ -1026,6 +1026,11 @@ msgstr "چرخه حیات"
 msgid "limit"
 msgstr "محدودیت"
 
+#. Short label for load average in All Systems list
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Load"
+msgstr ""
+
 #: src/components/routes/system/charts/load-average-chart.tsx
 msgid "Load Average"
 msgstr "میانگین بار"
@@ -1044,8 +1049,8 @@ msgstr "میانگین بار ۵ دقیقه"
 
 #. Short label for load average
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Load Avg"
-msgstr "میانگین بار"
+#~ msgid "Load Avg"
+#~ msgstr "میانگین بار"
 
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Load state"
@@ -1055,6 +1060,7 @@ msgstr "وضعیت بارگذاری"
 msgid "Loading..."
 msgstr "در حال بارگذاری..."
 
+#: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 #: src/components/systems-table/systems-table-columns.tsx
@@ -1177,6 +1183,10 @@ msgstr "واحد شبکه"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "No"
 msgstr "خیر"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "No data for selected filter"
+msgstr ""
 
 #: src/components/routes/system/charts/probe-charts.tsx
 msgid "No probe data"

@@ -1026,6 +1026,11 @@ msgstr "Жизнен цикъл"
 msgid "limit"
 msgstr "лимит"
 
+#. Short label for load average in All Systems list
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Load"
+msgstr ""
+
 #: src/components/routes/system/charts/load-average-chart.tsx
 msgid "Load Average"
 msgstr "Средно натоварване"
@@ -1044,8 +1049,8 @@ msgstr "Средно натоварване 5 минути"
 
 #. Short label for load average
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Load Avg"
-msgstr "Средно натоварване"
+#~ msgid "Load Avg"
+#~ msgstr "Средно натоварване"
 
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Load state"
@@ -1055,6 +1060,7 @@ msgstr "Състояние на зареждане"
 msgid "Loading..."
 msgstr "Зареждане..."
 
+#: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 #: src/components/systems-table/systems-table-columns.tsx
@@ -1177,6 +1183,10 @@ msgstr "Единица за измерване на скорост"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "No"
 msgstr "Не"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "No data for selected filter"
+msgstr ""
 
 #: src/components/routes/system/charts/probe-charts.tsx
 msgid "No probe data"

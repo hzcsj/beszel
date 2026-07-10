@@ -1021,6 +1021,11 @@ msgstr "Lifecycle"
 msgid "limit"
 msgstr "limit"
 
+#. Short label for load average in All Systems list
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Load"
+msgstr "Load"
+
 #: src/components/routes/system/charts/load-average-chart.tsx
 msgid "Load Average"
 msgstr "Load Average"
@@ -1039,8 +1044,8 @@ msgstr "Load Average 5m"
 
 #. Short label for load average
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Load Avg"
-msgstr "Load Avg"
+#~ msgid "Load Avg"
+#~ msgstr "Load Avg"
 
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Load state"
@@ -1050,6 +1055,7 @@ msgstr "Load state"
 msgid "Loading..."
 msgstr "Loading..."
 
+#: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 #: src/components/systems-table/systems-table-columns.tsx
@@ -1172,6 +1178,10 @@ msgstr "Network unit"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "No"
 msgstr "No"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "No data for selected filter"
+msgstr "No data for selected filter"
 
 #: src/components/routes/system/charts/probe-charts.tsx
 msgid "No probe data"

@@ -1026,6 +1026,11 @@ msgstr "Ciclo di vita"
 msgid "limit"
 msgstr "limite"
 
+#. Short label for load average in All Systems list
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Load"
+msgstr ""
+
 #: src/components/routes/system/charts/load-average-chart.tsx
 msgid "Load Average"
 msgstr "Carico medio"
@@ -1044,8 +1049,8 @@ msgstr "Caricamento medio 5m"
 
 #. Short label for load average
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Load Avg"
-msgstr "Carico Medio"
+#~ msgid "Load Avg"
+#~ msgstr "Carico Medio"
 
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Load state"
@@ -1055,6 +1060,7 @@ msgstr "Stato di caricamento"
 msgid "Loading..."
 msgstr "Caricamento..."
 
+#: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 #: src/components/systems-table/systems-table-columns.tsx
@@ -1176,6 +1182,10 @@ msgstr "Unità rete"
 #: src/components/systemd-table/systemd-table.tsx
 #: src/components/systemd-table/systemd-table.tsx
 msgid "No"
+msgstr ""
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "No data for selected filter"
 msgstr ""
 
 #: src/components/routes/system/charts/probe-charts.tsx

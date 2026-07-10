@@ -1026,6 +1026,11 @@ msgstr "생명주기"
 msgid "limit"
 msgstr "제한"
 
+#. Short label for load average in All Systems list
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Load"
+msgstr ""
+
 #: src/components/routes/system/charts/load-average-chart.tsx
 msgid "Load Average"
 msgstr "부하 평균"
@@ -1044,8 +1049,8 @@ msgstr "부하 평균 5분"
 
 #. Short label for load average
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Load Avg"
-msgstr "부하 평균"
+#~ msgid "Load Avg"
+#~ msgstr "부하 평균"
 
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Load state"
@@ -1055,6 +1060,7 @@ msgstr "로드 상태"
 msgid "Loading..."
 msgstr "로딩 중..."
 
+#: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 #: src/components/systems-table/systems-table-columns.tsx
@@ -1177,6 +1183,10 @@ msgstr "네트워크 단위"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "No"
 msgstr "아니오"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "No data for selected filter"
+msgstr ""
 
 #: src/components/routes/system/charts/probe-charts.tsx
 msgid "No probe data"

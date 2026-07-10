@@ -25,9 +25,9 @@ export async function dynamicActivate(locale: string) {
 		return
 	}
 	try {
-		if (locale === "zh" || locale === "zh-HK") {
+		if (locale === "zh-HK") {
 			const [localeModule, zhCNModule] = await Promise.all([
-				import(`../locales/${locale}/${locale}.ts`),
+				import("../locales/zh-HK/zh-HK.ts"),
 				import("../locales/zh-CN/zh-CN.ts"),
 			])
 			const merged: Messages = { ...enMessages, ...zhCNModule.messages, ...localeModule.messages }
@@ -43,26 +43,31 @@ export async function dynamicActivate(locale: string) {
 	}
 }
 
+const legacyZhMap: Record<string, string> = {
+	zh: "zh-HK",
+	"zh-TW": "zh-HK",
+	"zh-MO": "zh-HK",
+	"zh-Hant": "zh-HK",
+	"zh-Hans": "zh-CN",
+}
+
 export function getLocale() {
-	// let locale = detect(fromUrl("lang"), fromStorage("lang"), fromNavigator(), "en")
 	let locale = detect(fromStorage("lang"), fromNavigator(), "en")
-	// log if dev
 	if (import.meta.env.DEV) {
 		console.log("detected locale", locale)
 	}
-	// handle zh variants
-	if (locale?.startsWith("zh-")) {
-		// map zh variants to zh-CN
-		const zhVariantMap: Record<string, string> = {
-			"zh-HK": "zh-HK",
-			"zh-TW": "zh",
-			"zh-MO": "zh",
-			"zh-Hant": "zh",
+	if (locale) {
+		const mapped = legacyZhMap[locale]
+		if (mapped) {
+			localStorage.setItem("lang", mapped)
+			return mapped
 		}
-		return zhVariantMap[locale] || "zh-CN"
+		if (locale.startsWith("zh-")) {
+			if (locale === "zh-HK") return "zh-HK"
+			return "zh-CN"
+		}
 	}
 	locale = (locale || "en").split("-")[0]
-	// use en if locale is not in languages
 	if (!languages.some((l) => l[0] === locale)) {
 		locale = "en"
 	}

@@ -1026,6 +1026,11 @@ msgstr "Életciklus"
 msgid "limit"
 msgstr "korlát"
 
+#. Short label for load average in All Systems list
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Load"
+msgstr ""
+
 #: src/components/routes/system/charts/load-average-chart.tsx
 msgid "Load Average"
 msgstr "Terhelési átlag"
@@ -1044,8 +1049,8 @@ msgstr "Terhelési átlag 5p"
 
 #. Short label for load average
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Load Avg"
-msgstr "Terhelési átlag"
+#~ msgid "Load Avg"
+#~ msgstr "Terhelési átlag"
 
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Load state"
@@ -1055,6 +1060,7 @@ msgstr "Betöltési állapot"
 msgid "Loading..."
 msgstr "Betöltés..."
 
+#: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 #: src/components/systems-table/systems-table-columns.tsx
@@ -1177,6 +1183,10 @@ msgstr "Sávszélesség mértékegysége"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "No"
 msgstr "Nem"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "No data for selected filter"
+msgstr ""
 
 #: src/components/routes/system/charts/probe-charts.tsx
 msgid "No probe data"

@@ -1026,6 +1026,11 @@ msgstr "Livscyklus"
 msgid "limit"
 msgstr "grænse"
 
+#. Short label for load average in All Systems list
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Load"
+msgstr ""
+
 #: src/components/routes/system/charts/load-average-chart.tsx
 msgid "Load Average"
 msgstr "Belastning Gennemsnitlig"
@@ -1044,8 +1049,8 @@ msgstr "Belastning Gennemsnitlig 5m"
 
 #. Short label for load average
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Load Avg"
-msgstr "Belastning gns."
+#~ msgid "Load Avg"
+#~ msgstr "Belastning gns."
 
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Load state"
@@ -1055,6 +1060,7 @@ msgstr "Indlæsningstilstand"
 msgid "Loading..."
 msgstr "Indlæser..."
 
+#: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 #: src/components/systems-table/systems-table-columns.tsx
@@ -1177,6 +1183,10 @@ msgstr "Netværksenhed"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "No"
 msgstr "Nej"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "No data for selected filter"
+msgstr ""
 
 #: src/components/routes/system/charts/probe-charts.tsx
 msgid "No probe data"
