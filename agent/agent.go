@@ -48,6 +48,7 @@ type Agent struct {
 	keys                      []gossh.PublicKey                                     // SSH public keys
 	smartManager              *SmartManager                                         // Manages SMART data
 	systemdManager            *systemdManager                                       // Manages systemd services
+	probeCollector            *VPSProbeCollector                                    // VPS TCP probe collector
 }
 
 // NewAgent creates a new agent with the given data directory for persisting data.
@@ -143,6 +144,8 @@ func NewAgent(dataDir ...string) (agent *Agent, err error) {
 		slog.Debug("GPU", "err", err)
 	}
 
+	agent.probeCollector = newVPSProbeCollector()
+
 	// if debugging, print stats
 	if agent.debug {
 		slog.Debug("Stats", "data", agent.gatherStats(common.DataRequestOptions{CacheTimeMs: defaultDataCacheTimeMs, IncludeDetails: true}))
@@ -214,10 +217,19 @@ func (a *Agent) gatherStats(options common.DataRequestOptions) *system.CombinedD
 	return a.attachSystemDetails(data, cacheTimeMs, options.IncludeDetails)
 }
 
-// Start initializes and starts the agent with optional WebSocket connection
+// Start initializes and starts the agent with optional WebSocket connection.
+// Blocks until the agent is shut down via signal.
 func (a *Agent) Start(serverOptions ServerOptions) error {
 	a.keys = serverOptions.Keys
-	return a.connectionManager.Start(serverOptions)
+	if a.probeCollector != nil {
+		a.probeCollector.Start()
+		slog.Info("VPS probe collector started")
+	}
+	err := a.connectionManager.Start(serverOptions)
+	if a.probeCollector != nil {
+		a.probeCollector.Stop()
+	}
+	return err
 }
 
 func (a *Agent) getFingerprint() string {

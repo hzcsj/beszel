@@ -626,7 +626,6 @@ msgstr "设备"
 msgid "Discharging"
 msgstr "放电中"
 
-#: src/components/routes/system.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Disk"
 msgstr "磁盘"
@@ -998,6 +997,18 @@ msgstr "无效的电子邮件地址。"
 msgid "Language"
 msgstr "语言"
 
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Last updated"
+msgstr "最后更新"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Latency"
+msgstr "延迟"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Latency / Loss"
+msgstr "延迟 / 丢包"
+
 #: src/components/systems-table/systems-table.tsx
 msgid "Layout"
 msgstr "布局"
@@ -1099,6 +1110,10 @@ msgstr "下载/上传取最大值"
 msgid "Memory"
 msgstr "内存"
 
+#: src/components/routes/system.tsx
+msgid "Memory / Disk"
+msgstr "内存 / 磁盘"
+
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Memory limit"
 msgstr "内存限制"
@@ -1156,6 +1171,10 @@ msgstr "网络单位"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "No"
 msgstr "否"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "No probe data"
+msgstr "无探测数据"
 
 #: src/components/command-palette.tsx
 #: src/components/systemd-table/systemd-table.tsx
@@ -1222,6 +1241,14 @@ msgstr "其他"
 #: src/components/alerts/alerts-sheet.tsx
 msgid "Overwrite existing alerts"
 msgstr "覆盖现有警报"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Packet Loss"
+msgstr "丢包率"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Packet loss (%)"
+msgstr "丢包率 (%)"
 
 #: src/components/command-palette.tsx
 #: src/components/command-palette.tsx
@@ -1353,6 +1380,10 @@ msgstr "采集时间下的精确内存使用率"
 msgid "Preferred Language"
 msgstr "首选语言"
 
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Probe Latency"
+msgstr "探测延迟"
+
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Process started"
 msgstr "进程启动"
@@ -1384,6 +1415,10 @@ msgstr "配额"
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Quota: {quotaStr} ({pctStr}%)"
 msgstr "配额: {quotaStr} ({pctStr}%)"
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Reachable"
+msgstr "可达"
 
 #. Disk read
 #: src/components/routes/system/charts/disk-charts.tsx
@@ -1474,6 +1509,10 @@ msgstr "S.M.A.R.T. 详情"
 #: src/components/routes/system/smart-table.tsx
 msgid "S.M.A.R.T. Self-Test"
 msgstr "S.M.A.R.T. 自检"
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Samples"
+msgstr "采样数"
 
 #: src/components/add-system.tsx
 msgid "Save {foo}"
@@ -1668,6 +1707,10 @@ msgstr "标签页"
 msgid "Tasks"
 msgstr "任务数"
 
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "TCP probe latency (ms)"
+msgstr "TCP 探测延迟 (ms)"
+
 #. Temperature label in systems table
 #: src/components/routes/system/smart-table.tsx
 #: src/components/systems-table/systems-table-columns.tsx
@@ -1771,7 +1814,7 @@ msgstr "每个接口的总发送数据量"
 #: src/components/routes/system/disk-io-sheet.tsx
 msgctxt "Disk I/O"
 msgid "Total time spent on read/write (can exceed 100%)"
-msgstr ""
+msgstr "读写总耗时（可超过 100%）"
 
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Total Traffic"
@@ -1867,6 +1910,10 @@ msgstr "未知"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Unlimited"
 msgstr "无限制"
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Unreachable"
+msgstr "不可达"
 
 #. Context: System is up
 #: src/components/routes/system/info-bar.tsx

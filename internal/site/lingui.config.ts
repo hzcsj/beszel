@@ -34,6 +34,11 @@ export default defineConfig({
 		"zh-HK",
 	],
 	sourceLocale: "en",
+	fallbackLocales: {
+		zh: "zh-CN",
+		"zh-HK": "zh-CN",
+		default: "en",
+	},
 	compileNamespace: "ts",
 	formatOptions: {
 		lineNumbers: false,

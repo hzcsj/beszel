@@ -255,7 +255,11 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			},
 		},
 		{
-			accessorFn: ({ info, status }) => (status !== SystemStatus.Up ? undefined : info.bb),
+			accessorFn: ({ info, status }) => {
+				if (status !== SystemStatus.Up) return undefined
+				if (info.nb) return info.nb[0] + info.nb[1]
+				return info.bb
+			},
 			id: "net",
 			name: () => t`Net`,
 			size: 0,
@@ -263,14 +267,28 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			header: sortableHeader,
 			sortUndefined: "last",
 			cell(info) {
-				const val = info.getValue() as number | undefined
-				if (val === undefined) {
-					return null
-				}
+				const sysInfo = info.row.original.info
+				const status = info.row.original.status
+				if (status !== SystemStatus.Up) return null
+
 				const userSettings = useStore($userSettings, { keys: ["unitNet"] })
-				const { value, unit } = formatBytes(val, true, userSettings.unitNet, false)
+
+				if (sysInfo.nb) {
+					const dl = formatBytes(sysInfo.nb[1], true, userSettings.unitNet, false)
+					const ul = formatBytes(sysInfo.nb[0], true, userSettings.unitNet, false)
+					return (
+						<span className="tabular-nums whitespace-nowrap">
+							↓{decimalString(dl.value, dl.value >= 100 ? 1 : 2)} {dl.unit} | ↑
+							{decimalString(ul.value, ul.value >= 100 ? 1 : 2)} {ul.unit}
+						</span>
+					)
+				}
+
+				const bb = sysInfo.bb
+				if (bb === undefined) return null
+				const { value, unit } = formatBytes(bb, true, userSettings.unitNet, false)
 				return (
-					<span className="tabular-nums whitespace-nowrap">
+					<span className="tabular-nums whitespace-nowrap text-muted-foreground">
 						{decimalString(value, value >= 100 ? 1 : 2)} {unit}
 					</span>
 				)
@@ -391,6 +409,87 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 						<TooltipTrigger asChild>{content}</TooltipTrigger>
 						<TooltipContent side="bottom" className="max-w-xs">
 							<div className="grid gap-0.5 text-xs">
+								{tooltipLines.map((line, i) => (
+									<span key={i}>{line}</span>
+								))}
+							</div>
+						</TooltipContent>
+					</Tooltip>
+				)
+			},
+		},
+		{
+			accessorFn: ({ info }) => {
+				const vp = info.vp
+				if (!vp) return undefined
+				let worstLoss = 0
+				let worstLat = 0
+				for (const key of ["hub", "ct", "cu", "cm"]) {
+					const t = vp[key]
+					if (!t) continue
+					if ((t.loss ?? 0) > worstLoss) worstLoss = t.loss ?? 0
+					if (t.ok && (t.lat ?? 0) > worstLat) worstLat = t.lat ?? 0
+				}
+				return worstLoss * 10000 + worstLat
+			},
+			id: "probeLatency",
+			name: () => t`Probe Latency`,
+			size: 0,
+			Icon: WifiIcon,
+			header: sortableHeader,
+			sortUndefined: "last",
+			cell(info) {
+				const vp = info.row.original.info.vp
+				if (!vp) return null
+				const targets = ["hub", "ct", "cu", "cm"] as const
+				const labels = { hub: "HUB", ct: "CT", cu: "CU", cm: "CM" }
+
+				const parts = targets.map((key) => {
+					const p = vp[key]
+					if (!p) return { key, label: labels[key], lat: "--", loss: "--", warn: false, crit: false }
+					const latStr = p.ok ? `${Math.round(p.lat ?? 0)}ms` : "--"
+					const lossStr = `${decimalString(p.loss ?? 0, 1)}%`
+					const warn = (p.ok && (p.lat ?? 0) >= 200) || (p.loss ?? 0) >= 5
+					const crit = (p.ok && (p.lat ?? 0) >= 500) || (p.loss ?? 0) >= 20
+					return { key, label: labels[key], lat: latStr, loss: lossStr, warn, crit }
+				})
+
+				const tooltipLines: string[] = []
+				for (const key of targets) {
+					const p = vp[key]
+					if (!p) continue
+					const status = p.ok ? t`Reachable` : t`Unreachable`
+					const latStr = p.ok ? `${Math.round(p.lat ?? 0)}ms` : "--"
+					const lossStr = `${decimalString(p.loss ?? 0, 1)}%`
+					tooltipLines.push(`${labels[key]}: ${status} | ${latStr} / ${lossStr}`)
+					if (p.target) tooltipLines.push(`  ${p.target}`)
+					if (p.n) {
+						const samplesLabel = t`Samples`
+						tooltipLines.push(`  ${samplesLabel}: ${p.n}`)
+					}
+					if (p.ts) {
+						const d = new Date(p.ts * 1000)
+						const lastUpdated = t`Last updated`
+						tooltipLines.push(`  ${lastUpdated}: ${d.toLocaleTimeString()}`)
+					}
+				}
+
+				return (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<span className="tabular-nums whitespace-nowrap text-xs">
+								{parts.map((p, i) => (
+									<span key={p.key}>
+										{i > 0 && " "}
+										<span className={cn(p.crit ? "text-red-500" : p.warn ? "text-yellow-500" : "")}>
+											{p.label} {p.lat}/{p.loss}
+										</span>
+									</span>
+								))}
+							</span>
+						</TooltipTrigger>
+						<TooltipContent side="bottom" className="max-w-sm">
+							<div className="grid gap-0.5 text-xs font-mono whitespace-pre">
 								{tooltipLines.map((line, i) => (
 									<span key={i}>{line}</span>
 								))}

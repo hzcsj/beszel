@@ -91,6 +91,25 @@ export interface SystemInfo {
 	sv?: [number, number]
 	/** VPS traffic billing cycle info (hub-derived) */
 	vt?: VPSTrafficInfo
+	/** directional bandwidth bytes/s [upload, download] */
+	nb?: [number, number]
+	/** VPS probe results keyed by target (hub, ct, cu, cm) */
+	vp?: Record<string, VPSProbeTargetStats>
+}
+
+export interface VPSProbeTargetStats {
+	/** latency in milliseconds */
+	lat?: number
+	/** packet loss percentage */
+	loss?: number
+	/** last probe succeeded */
+	ok: boolean
+	/** rolling window sample count */
+	n?: number
+	/** last update unix timestamp */
+	ts?: number
+	/** probe target address */
+	target?: string
 }
 
 export interface VPSTrafficInfo {
@@ -191,6 +210,8 @@ export interface SystemStats {
 	bat?: [number, BatteryState]
 	/** network interfaces [upload bytes, download bytes, total upload bytes, total download bytes] */
 	ni?: Record<string, [number, number, number, number]>
+	/** VPS probe results keyed by target (hub, ct, cu, cm) */
+	vp?: Record<string, VPSProbeTargetStats>
 }
 
 export interface GPUData {

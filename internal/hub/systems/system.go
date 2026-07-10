@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -41,6 +42,7 @@ type System struct {
 	client         *ssh.Client             // SSH client for fetching data
 	sshTransport   *transport.SSHTransport // SSH transport for requests
 	data           *system.CombinedData    // system data from agent
+	fetchMu        sync.Mutex              // Serializes agent data fetches (realtime vs persistent)
 	ctx            context.Context         // Context for stopping the updater
 	cancel         context.CancelFunc      // Stops and removes system from updater
 	WsConn         *ws.WsConn              // Handler for agent WebSocket connection
@@ -129,8 +131,10 @@ func (sys *System) update() error {
 		options.IncludeDetails = true
 	}
 
+	sys.fetchMu.Lock()
 	data, err := sys.fetchDataFromAgent(options)
 	if err != nil {
+		sys.fetchMu.Unlock()
 		return err
 	}
 
@@ -140,15 +144,19 @@ func (sys *System) update() error {
 	// create system records
 	_, err = sys.createRecords(data)
 
-	// if details were included and fetched successfully, mark details as fetched and update smart interval if set by agent
+	// copy Details before releasing the lock — realtime worker may overwrite sys.data
+	var detailsCopy *system.Details
 	if err == nil && data.Details != nil {
+		d := *data.Details
+		detailsCopy = &d
+	}
+	sys.fetchMu.Unlock()
+
+	if detailsCopy != nil {
 		sys.detailsFetched.Store(true)
-		// update smart interval if it's set on the agent side
-		if data.Details.SmartInterval > 0 {
-			sys.smartInterval = data.Details.SmartInterval
+		if detailsCopy.SmartInterval > 0 {
+			sys.smartInterval = detailsCopy.SmartInterval
 			sys.manager.hub.Logger().Info("SMART interval updated from agent details", "system", sys.Id, "interval", sys.smartInterval.String())
-			// make sure we reset expiration of lastFetch to remain as long as the new smart interval
-			// to prevent premature expiration leading to new fetch if interval is different.
 			sys.manager.smartFetchMap.UpdateExpiration(sys.Id, sys.smartInterval+time.Minute)
 		}
 	}
@@ -250,7 +258,12 @@ func (sys *System) createRecords(data *system.CombinedData) (*core.Record, error
 					dbTraffic = settings.Traffic
 				}
 			}
-			data.Info.VPSTraffic = sys.manager.trafficManager.DeriveTraffic(sys.Id, systemName, dbTraffic, data.Stats.NetworkInterfaces)
+			data.Info.VPSTraffic = sys.manager.trafficManager.DeriveTraffic(sys.Id, systemName, dbTraffic, data.Stats.NetworkInterfaces, true)
+		}
+
+		// copy probe data from Stats to Info for list rendering
+		if len(data.Stats.VPSProbe) > 0 {
+			data.Info.VPSProbe = data.Stats.VPSProbe
 		}
 
 		// update system record (do this last because it triggers alerts and we need above records to be inserted first)
@@ -768,6 +781,10 @@ func migrateDeprecatedFields(cd *system.CombinedData, createDetails bool) {
 	if cd.Info.BandwidthBytes == 0 {
 		cd.Info.BandwidthBytes = uint64(cd.Info.Bandwidth * 1024 * 1024)
 		cd.Info.Bandwidth = 0
+	}
+	// backfill directional bandwidth from Stats for older agents
+	if cd.Info.BandwidthByDirection == [2]uint64{} && cd.Stats.Bandwidth != [2]uint64{} {
+		cd.Info.BandwidthByDirection = cd.Stats.Bandwidth
 	}
 	// migration added 0.19.0
 	if cd.Stats.DiskIO[0] == 0 && cd.Stats.DiskIO[1] == 0 {

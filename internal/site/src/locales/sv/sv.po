@@ -626,7 +626,6 @@ msgstr "Enhet"
 msgid "Discharging"
 msgstr "Urladdar"
 
-#: src/components/routes/system.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Disk"
 msgstr ""
@@ -998,6 +997,18 @@ msgstr "Ogiltig e-postadress."
 msgid "Language"
 msgstr "Språk"
 
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Last updated"
+msgstr ""
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Latency"
+msgstr ""
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Latency / Loss"
+msgstr ""
+
 #: src/components/systems-table/systems-table.tsx
 msgid "Layout"
 msgstr ""
@@ -1099,6 +1110,10 @@ msgstr ""
 msgid "Memory"
 msgstr "Minne"
 
+#: src/components/routes/system.tsx
+msgid "Memory / Disk"
+msgstr ""
+
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Memory limit"
 msgstr "Minnesgräns"
@@ -1156,6 +1171,10 @@ msgstr "Nätverksenhet"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "No"
 msgstr "Nej"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "No probe data"
+msgstr ""
 
 #: src/components/command-palette.tsx
 #: src/components/systemd-table/systemd-table.tsx
@@ -1222,6 +1241,14 @@ msgstr "Annat"
 #: src/components/alerts/alerts-sheet.tsx
 msgid "Overwrite existing alerts"
 msgstr "Skriv över befintliga larm"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Packet Loss"
+msgstr ""
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Packet loss (%)"
+msgstr ""
 
 #: src/components/command-palette.tsx
 #: src/components/command-palette.tsx
@@ -1353,6 +1380,10 @@ msgstr "Exakt användning vid den registrerade tidpunkten"
 msgid "Preferred Language"
 msgstr "Föredraget språk"
 
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Probe Latency"
+msgstr ""
+
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Process started"
 msgstr "Process startad"
@@ -1383,6 +1414,10 @@ msgstr ""
 #: src/components/systems-table/systems-table-columns.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Quota: {quotaStr} ({pctStr}%)"
+msgstr ""
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Reachable"
 msgstr ""
 
 #. Disk read
@@ -1474,6 +1509,10 @@ msgstr "S.M.A.R.T.-detaljer"
 #: src/components/routes/system/smart-table.tsx
 msgid "S.M.A.R.T. Self-Test"
 msgstr "S.M.A.R.T. själftest"
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Samples"
+msgstr ""
 
 #: src/components/add-system.tsx
 msgid "Save {foo}"
@@ -1667,6 +1706,10 @@ msgstr "Flikar"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Tasks"
 msgstr "Uppgifter"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "TCP probe latency (ms)"
+msgstr ""
 
 #. Temperature label in systems table
 #: src/components/routes/system/smart-table.tsx
@@ -1867,6 +1910,10 @@ msgstr "Okänd"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Unlimited"
 msgstr "Obegränsad"
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Unreachable"
+msgstr ""
 
 #. Context: System is up
 #: src/components/routes/system/info-bar.tsx

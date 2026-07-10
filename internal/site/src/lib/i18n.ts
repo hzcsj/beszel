@@ -22,14 +22,24 @@ function activateLocale(locale: string, messages: Messages = enMessages) {
 export async function dynamicActivate(locale: string) {
 	if (locale === "en") {
 		activateLocale(locale)
-	} else {
-		try {
+		return
+	}
+	try {
+		if (locale === "zh" || locale === "zh-HK") {
+			const [localeModule, zhCNModule] = await Promise.all([
+				import(`../locales/${locale}/${locale}.ts`),
+				import("../locales/zh-CN/zh-CN.ts"),
+			])
+			const merged: Messages = { ...enMessages, ...zhCNModule.messages, ...localeModule.messages }
+			activateLocale(locale, merged)
+		} else {
 			const { messages }: { messages: Messages } = await import(`../locales/${locale}/${locale}.ts`)
-			activateLocale(locale, messages)
-		} catch (error) {
-			console.error(`Error loading ${locale}`, error)
-			activateLocale("en")
+			const merged: Messages = { ...enMessages, ...messages }
+			activateLocale(locale, merged)
 		}
+	} catch (error) {
+		console.error(`Error loading ${locale}`, error)
+		activateLocale("en")
 	}
 }
 

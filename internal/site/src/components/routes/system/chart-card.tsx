@@ -90,6 +90,7 @@ export function ChartCard({
 	children,
 	grid,
 	empty,
+	emptyMessage,
 	cornerEl,
 	legend,
 	className,
@@ -99,6 +100,7 @@ export function ChartCard({
 	children: React.ReactNode
 	grid?: boolean
 	empty?: boolean
+	emptyMessage?: string
 	cornerEl?: JSX.Element | null
 	legend?: boolean
 	className?: string
@@ -122,7 +124,7 @@ export function ChartCard({
 			<div className={cn("ps-0 -me-1 -ms-3.5 relative group", legend ? "h-54 md:h-56" : "h-48 md:h-52")}>
 				{
 					<Spinner
-						msg={empty ? t`Waiting for enough records to display` : undefined}
+						msg={empty ? emptyMessage || t`Waiting for enough records to display` : undefined}
 						className="group-has-[.opacity-100]:invisible duration-100"
 					/>
 				}

@@ -93,7 +93,7 @@ func TestFirstSampleInitialization(t *testing.T) {
 		"eth0": {1000, 500, 1_000_000, 2_000_000},
 	}
 
-	info := m.DeriveTraffic("sys1", "hzcsj", nil, ni)
+	info := m.DeriveTraffic("sys1", "hzcsj", nil, ni, true)
 	if info == nil {
 		t.Fatal("expected non-nil VPSTrafficInfo on first sample")
 	}
@@ -114,10 +114,10 @@ func TestNormalPositiveDeltas(t *testing.T) {
 	m := NewVPSTrafficManager(dir)
 
 	ni1 := map[string][4]uint64{"eth0": {0, 0, 100_000, 200_000}}
-	m.DeriveTraffic("sys1", "node1", nil, ni1)
+	m.DeriveTraffic("sys1", "node1", nil, ni1, true)
 
 	ni2 := map[string][4]uint64{"eth0": {0, 0, 150_000, 300_000}}
-	info := m.DeriveTraffic("sys1", "node1", nil, ni2)
+	info := m.DeriveTraffic("sys1", "node1", nil, ni2, true)
 	if info == nil {
 		t.Fatal("expected non-nil")
 	}
@@ -141,14 +141,14 @@ func TestCounterReset(t *testing.T) {
 	m := NewVPSTrafficManager(dir)
 
 	ni1 := map[string][4]uint64{"eth0": {0, 0, 1_000_000, 2_000_000}}
-	m.DeriveTraffic("sys1", "node1", nil, ni1)
+	m.DeriveTraffic("sys1", "node1", nil, ni1, true)
 
 	ni2 := map[string][4]uint64{"eth0": {0, 0, 1_500_000, 2_500_000}}
-	m.DeriveTraffic("sys1", "node1", nil, ni2)
+	m.DeriveTraffic("sys1", "node1", nil, ni2, true)
 
 	// simulate reboot: counters drop
 	ni3 := map[string][4]uint64{"eth0": {0, 0, 50_000, 30_000}}
-	info := m.DeriveTraffic("sys1", "node1", nil, ni3)
+	info := m.DeriveTraffic("sys1", "node1", nil, ni3, true)
 	if info == nil {
 		t.Fatal("expected non-nil")
 	}
@@ -167,10 +167,10 @@ func TestCounterResetZero(t *testing.T) {
 	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1}}`)
 	m := NewVPSTrafficManager(dir)
 
-	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 500_000, 600_000}})
-	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 700_000, 800_000}})
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 500_000, 600_000}}, true)
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 700_000, 800_000}}, true)
 
-	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 0, 0}})
+	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 0, 0}}, true)
 	// counter dropped to 0 → delta must be 0, not the old total
 	if info.CycleTxBytes != 200_000 || info.CycleRxBytes != 200_000 {
 		t.Errorf("zero counter should not spike: ctx=%d crx=%d", info.CycleTxBytes, info.CycleRxBytes)
@@ -199,7 +199,7 @@ func TestMonthReset(t *testing.T) {
 
 	// Cross-cycle sample: counters grew since last observation
 	ni := map[string][4]uint64{"eth0": {0, 0, 2_100_000, 1_100_000}}
-	info := m.DeriveTraffic("sys1", "node1", nil, ni)
+	info := m.DeriveTraffic("sys1", "node1", nil, ni, true)
 	if info == nil {
 		t.Fatal("expected non-nil")
 	}
@@ -244,7 +244,7 @@ func TestInvalidConfigFallback(t *testing.T) {
 
 	// Manager must still work with built-in defaults
 	ni := map[string][4]uint64{"eth0": {0, 0, 100, 200}}
-	info := m.DeriveTraffic("sys1", "node1", nil, ni)
+	info := m.DeriveTraffic("sys1", "node1", nil, ni, true)
 	if info == nil {
 		t.Fatal("invalid config should fall back to defaults, not disable")
 	}
@@ -262,7 +262,7 @@ func TestEmptyConfigUsesDefaults(t *testing.T) {
 	m := NewVPSTrafficManager(dir)
 
 	ni := map[string][4]uint64{"eth0": {0, 0, 100, 200}}
-	info := m.DeriveTraffic("sys1", "node1", nil, ni)
+	info := m.DeriveTraffic("sys1", "node1", nil, ni, true)
 	if info == nil {
 		t.Fatal("empty config should still enable traffic tracking with defaults")
 	}
@@ -277,9 +277,9 @@ func TestStatePersistenceAndReload(t *testing.T) {
 	m := NewVPSTrafficManager(dir)
 
 	ni1 := map[string][4]uint64{"eth0": {0, 0, 100_000, 200_000}}
-	m.DeriveTraffic("sys1", "node1", nil, ni1)
+	m.DeriveTraffic("sys1", "node1", nil, ni1, true)
 	ni2 := map[string][4]uint64{"eth0": {0, 0, 150_000, 300_000}}
-	m.DeriveTraffic("sys1", "node1", nil, ni2)
+	m.DeriveTraffic("sys1", "node1", nil, ni2, true)
 
 	m2 := NewVPSTrafficManager(dir)
 	state, ok := m2.states["sys1"]
@@ -320,13 +320,13 @@ func TestMultipleInterfaces(t *testing.T) {
 		"eth0": {0, 0, 100_000, 200_000},
 		"eth1": {0, 0, 50_000, 80_000},
 	}
-	m.DeriveTraffic("sys1", "node1", nil, ni1)
+	m.DeriveTraffic("sys1", "node1", nil, ni1, true)
 
 	ni2 := map[string][4]uint64{
 		"eth0": {0, 0, 120_000, 250_000},
 		"eth1": {0, 0, 70_000, 100_000},
 	}
-	info := m.DeriveTraffic("sys1", "node1", nil, ni2)
+	info := m.DeriveTraffic("sys1", "node1", nil, ni2, true)
 	if info == nil {
 		t.Fatal("expected non-nil")
 	}
@@ -344,11 +344,11 @@ func TestSingleNicReset(t *testing.T) {
 	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1}}`)
 	m := NewVPSTrafficManager(dir)
 
-	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 1_000_000, 2_000_000}})
-	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 1_200_000, 2_400_000}})
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 1_000_000, 2_000_000}}, true)
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 1_200_000, 2_400_000}}, true)
 
 	// eth0 reboots, counter goes to 10_000
-	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 10_000, 20_000}})
+	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 10_000, 20_000}}, true)
 	// delta1: tx=200k, rx=400k.  delta2 (reset): tx=10k, rx=20k
 	if info.CycleTxBytes != 210_000 {
 		t.Errorf("single NIC reset CycleTx: want 210000, got %d", info.CycleTxBytes)
@@ -367,12 +367,12 @@ func TestMultiNicOneReset(t *testing.T) {
 	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{
 		"eth0": {0, 0, 1_000_000, 2_000_000},
 		"eth1": {0, 0, 500_000, 600_000},
-	})
+	}, true)
 
 	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{
 		"eth0": {0, 0, 1_100_000, 2_200_000}, // normal growth +100k tx, +200k rx
-		"eth1": {0, 0, 5_000, 8_000},          // reset: delta = 5k tx, 8k rx
-	})
+		"eth1": {0, 0, 5_000, 8_000},         // reset: delta = 5k tx, 8k rx
+	}, true)
 	// eth0: tx delta=100k, rx delta=200k
 	// eth1: tx delta=5k (reset), rx delta=8k (reset)
 	if info.CycleTxBytes != 105_000 {
@@ -393,12 +393,12 @@ func TestNicDisappears(t *testing.T) {
 	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{
 		"eth0": {0, 0, 100_000, 200_000},
 		"eth1": {0, 0, 50_000, 80_000},
-	})
+	}, true)
 
 	// eth1 disappears
 	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{
 		"eth0": {0, 0, 120_000, 250_000},
-	})
+	}, true)
 	// only eth0 delta should count: tx +20k, rx +50k
 	if info.CycleTxBytes != 20_000 {
 		t.Errorf("NIC disappear CycleTx: want 20000, got %d", info.CycleTxBytes)
@@ -417,13 +417,13 @@ func TestNewNicAppears(t *testing.T) {
 
 	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{
 		"eth0": {0, 0, 100_000, 200_000},
-	})
+	}, true)
 
 	// eth1 appears with existing large counters
 	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{
-		"eth0": {0, 0, 120_000, 250_000},   // normal: tx +20k, rx +50k
+		"eth0": {0, 0, 120_000, 250_000},     // normal: tx +20k, rx +50k
 		"eth1": {0, 0, 5_000_000, 8_000_000}, // new NIC → baseline only
-	})
+	}, true)
 	// only eth0 delta should count
 	if info.CycleTxBytes != 20_000 {
 		t.Errorf("new NIC appear CycleTx: want 20000, got %d", info.CycleTxBytes)
@@ -436,7 +436,7 @@ func TestNewNicAppears(t *testing.T) {
 	info2 := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{
 		"eth0": {0, 0, 130_000, 260_000},
 		"eth1": {0, 0, 5_010_000, 8_020_000},
-	})
+	}, true)
 	// eth0: tx +10k, rx +10k.  eth1: tx +10k, rx +20k
 	if info2.CycleTxBytes != 40_000 {
 		t.Errorf("new NIC 2nd sample CycleTx: want 40000, got %d", info2.CycleTxBytes)
@@ -455,7 +455,7 @@ func TestInvalidDefaultBillingModeFallback(t *testing.T) {
 		t.Errorf("invalid default billingMode should fall back: got %s", m.config.Default.BillingMode)
 	}
 	ni := map[string][4]uint64{"eth0": {0, 0, 100, 200}}
-	info := m.DeriveTraffic("sys1", "node1", nil, ni)
+	info := m.DeriveTraffic("sys1", "node1", nil, ni, true)
 	if info.BillingMode != BillingModeMaxRxTx {
 		t.Errorf("DeriveTraffic should return canonical mode: got %s", info.BillingMode)
 	}
@@ -488,9 +488,9 @@ func TestValidBillingModeOverride(t *testing.T) {
 		t.Errorf("valid override should take effect: got %s", ncUS.BillingMode)
 	}
 	ni := map[string][4]uint64{"eth0": {0, 0, 500, 300}}
-	m.DeriveTraffic("sys2", "us", nil, ni)
+	m.DeriveTraffic("sys2", "us", nil, ni, true)
 	ni2 := map[string][4]uint64{"eth0": {0, 0, 700, 400}}
-	info := m.DeriveTraffic("sys2", "us", nil, ni2)
+	info := m.DeriveTraffic("sys2", "us", nil, ni2, true)
 	if info.BillingMode != BillingModeTxOnly {
 		t.Errorf("DeriveTraffic should return tx_only: got %s", info.BillingMode)
 	}
@@ -576,10 +576,10 @@ func TestDeriveTrafficWithDBConfig(t *testing.T) {
 	dbTraffic := &VPSTrafficNodeConfig{ResetDay: 16, BillingMode: "tx_only"}
 
 	ni := map[string][4]uint64{"eth0": {0, 0, 100_000, 200_000}}
-	m.DeriveTraffic("sys1", "us", dbTraffic, ni)
+	m.DeriveTraffic("sys1", "us", dbTraffic, ni, true)
 
 	ni2 := map[string][4]uint64{"eth0": {0, 0, 150_000, 300_000}}
-	info := m.DeriveTraffic("sys1", "us", dbTraffic, ni2)
+	info := m.DeriveTraffic("sys1", "us", dbTraffic, ni2, true)
 	if info.ResetDay != 16 {
 		t.Errorf("expected DB resetDay=16, got %d", info.ResetDay)
 	}
@@ -591,6 +591,100 @@ func TestDeriveTrafficWithDBConfig(t *testing.T) {
 	}
 	if info.QuotaBytes != 1_000_000 {
 		t.Errorf("quota should inherit from env default, got %d", info.QuotaBytes)
+	}
+}
+
+func TestRealtimeNoPersistentFlush(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1,"billingMode":"max_rx_tx"}}`)
+	m := NewVPSTrafficManager(dir)
+	m.flushInterval = 1 * time.Hour // prevent throttled flush from triggering
+
+	ni1 := map[string][4]uint64{"eth0": {0, 0, 100_000, 200_000}}
+	m.DeriveTraffic("sys1", "node1", nil, ni1, true)
+	m.dirty = false
+	m.lastFlush = time.Now()
+
+	ni2 := map[string][4]uint64{"eth0": {0, 0, 120_000, 250_000}}
+	m.DeriveTraffic("sys1", "node1", nil, ni2, false)
+	if !m.dirty {
+		t.Error("dirty flag should be set after realtime sample")
+	}
+
+	state := m.states["sys1"]
+	if state.CycleTx != 20_000 || state.CycleRx != 50_000 {
+		t.Errorf("realtime delta mismatch: CycleTx=%d CycleRx=%d", state.CycleTx, state.CycleRx)
+	}
+}
+
+func TestRealtimeThrottledFlush(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1}}`)
+	m := NewVPSTrafficManager(dir)
+	m.flushInterval = 0
+
+	ni1 := map[string][4]uint64{"eth0": {0, 0, 100, 200}}
+	m.DeriveTraffic("sys1", "node1", nil, ni1, true)
+	m.dirty = false
+	m.lastFlush = time.Time{}
+
+	ni2 := map[string][4]uint64{"eth0": {0, 0, 200, 300}}
+	m.DeriveTraffic("sys1", "node1", nil, ni2, false)
+	if m.dirty {
+		t.Error("dirty should be cleared after throttled flush with zero interval")
+	}
+}
+
+func TestRealtimeThenPersistent(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1,"billingMode":"sum_rx_tx"}}`)
+	m := NewVPSTrafficManager(dir)
+	m.flushInterval = 1 * time.Hour
+
+	ni1 := map[string][4]uint64{"eth0": {0, 0, 1000, 2000}}
+	m.DeriveTraffic("sys1", "node1", nil, ni1, true)
+
+	ni2 := map[string][4]uint64{"eth0": {0, 0, 1500, 2500}}
+	info2 := m.DeriveTraffic("sys1", "node1", nil, ni2, false)
+	if info2.CycleTxBytes != 500 || info2.CycleRxBytes != 500 {
+		t.Errorf("realtime: CycleTx=%d CycleRx=%d", info2.CycleTxBytes, info2.CycleRxBytes)
+	}
+
+	ni3 := map[string][4]uint64{"eth0": {0, 0, 2000, 3500}}
+	info3 := m.DeriveTraffic("sys1", "node1", nil, ni3, true)
+	if info3.CycleTxBytes != 1000 || info3.CycleRxBytes != 1500 {
+		t.Errorf("persistent after realtime: CycleTx=%d CycleRx=%d", info3.CycleTxBytes, info3.CycleRxBytes)
+	}
+	if m.dirty {
+		t.Error("dirty should be cleared after persistent flush")
+	}
+}
+
+func TestFlushDirty(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1}}`)
+	m := NewVPSTrafficManager(dir)
+	m.flushInterval = 1 * time.Hour
+
+	ni := map[string][4]uint64{"eth0": {0, 0, 100, 200}}
+	m.DeriveTraffic("sys1", "node1", nil, ni, true)
+	ni2 := map[string][4]uint64{"eth0": {0, 0, 200, 300}}
+	m.DeriveTraffic("sys1", "node1", nil, ni2, false)
+	if !m.dirty {
+		t.Fatal("dirty should be true before FlushDirty")
+	}
+	m.FlushDirty()
+	if m.dirty {
+		t.Error("dirty should be cleared after FlushDirty")
+	}
+
+	m2 := NewVPSTrafficManager(dir)
+	state, ok := m2.states["sys1"]
+	if !ok {
+		t.Fatal("state should be reloaded after FlushDirty")
+	}
+	if state.CycleTx != 100 || state.CycleRx != 100 {
+		t.Errorf("reloaded state mismatch: CycleTx=%d CycleRx=%d", state.CycleTx, state.CycleRx)
 	}
 }
 

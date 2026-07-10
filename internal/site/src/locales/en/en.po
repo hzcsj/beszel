@@ -621,7 +621,6 @@ msgstr "Device"
 msgid "Discharging"
 msgstr "Discharging"
 
-#: src/components/routes/system.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Disk"
 msgstr "Disk"
@@ -993,6 +992,18 @@ msgstr "Invalid email address."
 msgid "Language"
 msgstr "Language"
 
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Last updated"
+msgstr "Last updated"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Latency"
+msgstr "Latency"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Latency / Loss"
+msgstr "Latency / Loss"
+
 #: src/components/systems-table/systems-table.tsx
 msgid "Layout"
 msgstr "Layout"
@@ -1094,6 +1105,10 @@ msgstr "Max of download/upload"
 msgid "Memory"
 msgstr "Memory"
 
+#: src/components/routes/system.tsx
+msgid "Memory / Disk"
+msgstr "Memory / Disk"
+
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Memory limit"
 msgstr "Memory limit"
@@ -1151,6 +1166,10 @@ msgstr "Network unit"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "No"
 msgstr "No"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "No probe data"
+msgstr "No probe data"
 
 #: src/components/command-palette.tsx
 #: src/components/systemd-table/systemd-table.tsx
@@ -1217,6 +1236,14 @@ msgstr "Other"
 #: src/components/alerts/alerts-sheet.tsx
 msgid "Overwrite existing alerts"
 msgstr "Overwrite existing alerts"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Packet Loss"
+msgstr "Packet Loss"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Packet loss (%)"
+msgstr "Packet loss (%)"
 
 #: src/components/command-palette.tsx
 #: src/components/command-palette.tsx
@@ -1348,6 +1375,10 @@ msgstr "Precise utilization at the recorded time"
 msgid "Preferred Language"
 msgstr "Preferred Language"
 
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Probe Latency"
+msgstr "Probe Latency"
+
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Process started"
 msgstr "Process started"
@@ -1379,6 +1410,10 @@ msgstr "Quota"
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Quota: {quotaStr} ({pctStr}%)"
 msgstr "Quota: {quotaStr} ({pctStr}%)"
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Reachable"
+msgstr "Reachable"
 
 #. Disk read
 #: src/components/routes/system/charts/disk-charts.tsx
@@ -1469,6 +1504,10 @@ msgstr "S.M.A.R.T. Details"
 #: src/components/routes/system/smart-table.tsx
 msgid "S.M.A.R.T. Self-Test"
 msgstr "S.M.A.R.T. Self-Test"
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Samples"
+msgstr "Samples"
 
 #: src/components/add-system.tsx
 msgid "Save {foo}"
@@ -1662,6 +1701,10 @@ msgstr "Tabs"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Tasks"
 msgstr "Tasks"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "TCP probe latency (ms)"
+msgstr "TCP probe latency (ms)"
 
 #. Temperature label in systems table
 #: src/components/routes/system/smart-table.tsx
@@ -1862,6 +1905,10 @@ msgstr "Unknown"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Unlimited"
 msgstr "Unlimited"
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Unreachable"
+msgstr "Unreachable"
 
 #. Context: System is up
 #: src/components/routes/system/info-bar.tsx

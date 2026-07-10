@@ -626,7 +626,6 @@ msgstr "Perangkat"
 msgid "Discharging"
 msgstr "Sedang tidak di charge"
 
-#: src/components/routes/system.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Disk"
 msgstr ""
@@ -998,6 +997,18 @@ msgstr "Alamat email tidak valid."
 msgid "Language"
 msgstr "Bahasa"
 
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Last updated"
+msgstr ""
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Latency"
+msgstr ""
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Latency / Loss"
+msgstr ""
+
 #: src/components/systems-table/systems-table.tsx
 msgid "Layout"
 msgstr "Tampilan"
@@ -1099,6 +1110,10 @@ msgstr ""
 msgid "Memory"
 msgstr "Memori"
 
+#: src/components/routes/system.tsx
+msgid "Memory / Disk"
+msgstr ""
+
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Memory limit"
 msgstr "Batas memori"
@@ -1156,6 +1171,10 @@ msgstr "Unit jaringan"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "No"
 msgstr "Tidak"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "No probe data"
+msgstr ""
 
 #: src/components/command-palette.tsx
 #: src/components/systemd-table/systemd-table.tsx
@@ -1222,6 +1241,14 @@ msgstr "Lainnya"
 #: src/components/alerts/alerts-sheet.tsx
 msgid "Overwrite existing alerts"
 msgstr "Timpa peringatan yang ada"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Packet Loss"
+msgstr ""
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Packet loss (%)"
+msgstr ""
 
 #: src/components/command-palette.tsx
 #: src/components/command-palette.tsx
@@ -1353,6 +1380,10 @@ msgstr "Utilisasi tepat pada waktu yang direkam"
 msgid "Preferred Language"
 msgstr "Pilihan Bahasa"
 
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Probe Latency"
+msgstr ""
+
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Process started"
 msgstr "Proses dimulai"
@@ -1383,6 +1414,10 @@ msgstr ""
 #: src/components/systems-table/systems-table-columns.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Quota: {quotaStr} ({pctStr}%)"
+msgstr ""
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Reachable"
 msgstr ""
 
 #. Disk read
@@ -1474,6 +1509,10 @@ msgstr "Detail S.M.A.R.T."
 #: src/components/routes/system/smart-table.tsx
 msgid "S.M.A.R.T. Self-Test"
 msgstr "Self-Test S.M.A.R.T."
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Samples"
+msgstr ""
 
 #: src/components/add-system.tsx
 msgid "Save {foo}"
@@ -1667,6 +1706,10 @@ msgstr "Tab"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Tasks"
 msgstr "Tugas"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "TCP probe latency (ms)"
+msgstr ""
 
 #. Temperature label in systems table
 #: src/components/routes/system/smart-table.tsx
@@ -1867,6 +1910,10 @@ msgstr "Tidak diketahui"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Unlimited"
 msgstr "Tidak terbatas"
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Unreachable"
+msgstr ""
 
 #. Context: System is up
 #: src/components/routes/system/info-bar.tsx

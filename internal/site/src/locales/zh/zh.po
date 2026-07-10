@@ -626,7 +626,6 @@ msgstr "裝置"
 msgid "Discharging"
 msgstr "放電中"
 
-#: src/components/routes/system.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Disk"
 msgstr "磁碟"
@@ -998,6 +997,18 @@ msgstr "無效的電子郵件地址。"
 msgid "Language"
 msgstr "語言"
 
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Last updated"
+msgstr ""
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Latency"
+msgstr ""
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Latency / Loss"
+msgstr ""
+
 #: src/components/systems-table/systems-table.tsx
 msgid "Layout"
 msgstr "版面配置"
@@ -1099,6 +1110,10 @@ msgstr "下載/上傳取最大值"
 msgid "Memory"
 msgstr "記憶體"
 
+#: src/components/routes/system.tsx
+msgid "Memory / Disk"
+msgstr ""
+
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Memory limit"
 msgstr "記憶體限制"
@@ -1156,6 +1171,10 @@ msgstr "網路單位"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "No"
 msgstr "否"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "No probe data"
+msgstr ""
 
 #: src/components/command-palette.tsx
 #: src/components/systemd-table/systemd-table.tsx
@@ -1222,6 +1241,14 @@ msgstr "其他"
 #: src/components/alerts/alerts-sheet.tsx
 msgid "Overwrite existing alerts"
 msgstr "覆蓋現有警報"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Packet Loss"
+msgstr ""
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "Packet loss (%)"
+msgstr ""
 
 #: src/components/command-palette.tsx
 #: src/components/command-palette.tsx
@@ -1353,6 +1380,10 @@ msgstr "紀錄時間內的精確使用量"
 msgid "Preferred Language"
 msgstr "首選語言"
 
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Probe Latency"
+msgstr ""
+
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Process started"
 msgstr "進程啟動"
@@ -1384,6 +1415,10 @@ msgstr "配額"
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Quota: {quotaStr} ({pctStr}%)"
 msgstr "配額: {quotaStr} ({pctStr}%)"
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Reachable"
+msgstr ""
 
 #. Disk read
 #: src/components/routes/system/charts/disk-charts.tsx
@@ -1474,6 +1509,10 @@ msgstr "S.M.A.R.T. 詳細資訊"
 #: src/components/routes/system/smart-table.tsx
 msgid "S.M.A.R.T. Self-Test"
 msgstr "S.M.A.R.T. 自我測試"
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Samples"
+msgstr ""
 
 #: src/components/add-system.tsx
 msgid "Save {foo}"
@@ -1667,6 +1706,10 @@ msgstr "分頁"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Tasks"
 msgstr "任務數"
+
+#: src/components/routes/system/charts/probe-charts.tsx
+msgid "TCP probe latency (ms)"
+msgstr ""
 
 #. Temperature label in systems table
 #: src/components/routes/system/smart-table.tsx
@@ -1867,6 +1910,10 @@ msgstr "未知"
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Unlimited"
 msgstr "無限制"
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Unreachable"
+msgstr ""
 
 #. Context: System is up
 #: src/components/routes/system/info-bar.tsx

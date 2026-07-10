@@ -1,8 +1,9 @@
 import { useLingui } from "@lingui/react/macro"
-import { memo, Suspense, useEffect, useMemo } from "react"
+import { memo, Suspense, useCallback, useEffect, useMemo } from "react"
 import SystemsTable from "@/components/systems-table/systems-table"
 import { ActiveAlerts } from "@/components/active-alerts"
 import { FooterRepoLink } from "@/components/footer-repo-link"
+import { subscribeRealtime, unsubscribeRealtime } from "@/lib/systemsManager"
 
 export default memo(() => {
 	const { t } = useLingui()
@@ -10,6 +11,23 @@ export default memo(() => {
 	useEffect(() => {
 		document.title = `${t`All Systems`} / Beszel`
 	}, [t])
+
+	const handleVisibilityChange = useCallback(() => {
+		if (document.visibilityState === "visible") {
+			subscribeRealtime()
+		} else {
+			unsubscribeRealtime()
+		}
+	}, [])
+
+	useEffect(() => {
+		subscribeRealtime()
+		document.addEventListener("visibilitychange", handleVisibilityChange)
+		return () => {
+			document.removeEventListener("visibilitychange", handleVisibilityChange)
+			unsubscribeRealtime()
+		}
+	}, [handleVisibilityChange])
 
 	return useMemo(
 		() => (

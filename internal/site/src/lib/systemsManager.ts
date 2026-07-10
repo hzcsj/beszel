@@ -11,7 +11,7 @@ import {
 } from "@/lib/stores"
 import { getVisualStringWidth, updateFavicon } from "@/lib/utils"
 import type { SystemRecord } from "@/types"
-import { SystemStatus } from "./enums"
+import { BatteryState, SystemStatus } from "./enums"
 
 const COLLECTION = pb.collection<SystemRecord>("systems")
 const FIELDS_DEFAULT = "id,name,host,port,info,status"
@@ -22,6 +22,7 @@ const MAX_SYSTEM_NAME_LENGTH = 22
 let initialized = false
 // biome-ignore lint/suspicious/noConfusingVoidType: typescript rocks
 let unsub: (() => void) | undefined | void
+let realtimeActive = false
 
 /** Initialize the systems manager and set up listeners */
 export function init() {
@@ -182,3 +183,114 @@ export async function refresh() {
 
 /** Unsubscribe from real-time system updates */
 export const unsubscribe = () => (unsub = unsub?.())
+
+interface SystemListSummary {
+	id: string
+	ts: number
+	info: SystemRecord["info"]
+}
+
+const rtSubsBySystem = new Map<string, () => void>()
+const rtPending = new Map<string, number>()
+let rtGeneration = 0
+let storeUnsub: (() => void) | undefined
+
+/** Dynamic fields that omitempty/omitzero may omit when zero — explicitly reset before merge */
+const dynamicZeroDefaults: Partial<SystemRecord["info"]> = {
+	dt: 0,
+	g: 0,
+	b: 0,
+	bat: [0, BatteryState.Unknown],
+}
+
+function handleRealtimeMessage(data: SystemListSummary) {
+	const existing = $allSystemsById.get()[data.id]
+	if (!existing) return
+	const updated = {
+		...existing,
+		info: { ...existing.info, ...dynamicZeroDefaults, ...data.info },
+	}
+	$allSystemsById.setKey(data.id, updated)
+	$allSystemsByName.setKey(updated.name, updated)
+	if (updated.status === SystemStatus.Up) {
+		$upSystems.setKey(updated.id, updated)
+	}
+}
+
+async function subscribeSystem(systemId: string, gen: number) {
+	if (rtSubsBySystem.has(systemId)) return
+	const pendingGen = rtPending.get(systemId)
+	if (pendingGen !== undefined && pendingGen >= gen) return
+	rtPending.set(systemId, gen)
+	try {
+		const fn = await pb.realtime.subscribe("rt_systems", handleRealtimeMessage, {
+			query: { system: systemId },
+		})
+		if (rtPending.get(systemId) === gen) {
+			rtPending.delete(systemId)
+		}
+		const stillUp = !!$upSystems.get()[systemId]?.id
+		if (fn && realtimeActive && gen === rtGeneration && stillUp) {
+			rtSubsBySystem.set(systemId, fn)
+		} else if (fn) {
+			fn()
+		}
+	} catch {
+		if (rtPending.get(systemId) === gen) {
+			rtPending.delete(systemId)
+		}
+	}
+}
+
+function unsubscribeSystem(systemId: string) {
+	const fn = rtSubsBySystem.get(systemId)
+	if (fn) {
+		try {
+			fn()
+		} catch {
+			// ignore
+		}
+		rtSubsBySystem.delete(systemId)
+	}
+}
+
+/** Subscribe to rt_systems realtime updates, tracking $upSystems changes */
+export function subscribeRealtime() {
+	if (realtimeActive) return
+	realtimeActive = true
+	rtGeneration++
+	const gen = rtGeneration
+
+	for (const sys of Object.values($upSystems.get())) {
+		subscribeSystem(sys.id, gen)
+	}
+
+	storeUnsub = $upSystems.listen((newSystems, oldSystems, changedKey) => {
+		if (!realtimeActive) return
+		const isNowUp = !!newSystems[changedKey]?.id
+		const wasUp = !!oldSystems[changedKey]?.id
+		if (isNowUp && !wasUp) {
+			subscribeSystem(changedKey, rtGeneration)
+		} else if (!isNowUp && wasUp) {
+			unsubscribeSystem(changedKey)
+		}
+	})
+}
+
+/** Unsubscribe from all rt_systems realtime updates */
+export function unsubscribeRealtime() {
+	realtimeActive = false
+	rtGeneration++
+	if (storeUnsub) {
+		storeUnsub()
+		storeUnsub = undefined
+	}
+	for (const [, fn] of rtSubsBySystem) {
+		try {
+			fn()
+		} catch {
+			// ignore
+		}
+	}
+	rtSubsBySystem.clear()
+}

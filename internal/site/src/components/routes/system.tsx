@@ -13,6 +13,7 @@ import { TemperatureChart, BatteryChart } from "./system/charts/sensor-charts"
 import { GpuPowerChart, GpuDetailCharts } from "./system/charts/gpu-charts"
 import { LazyContainersTable, LazySmartTable, LazySystemdTable } from "./system/lazy-tables"
 import { LoadAverageChart } from "./system/charts/load-average-chart"
+import { ProbeChart } from "./system/charts/probe-charts"
 import { ContainerIcon, CpuIcon, HardDriveIcon, TerminalSquareIcon } from "lucide-react"
 import { GpuIcon } from "../ui/icons"
 import SystemdTable from "../systemd-table/systemd-table"
@@ -77,9 +78,21 @@ export default memo(function SystemDetail({ id }: { id: string }) {
 	function defaultLayout() {
 		return (
 			<>
-				{/* main charts */}
+				{/* Row 1: CPU, System Load */}
+				{/* Row 2: Bandwidth, Latency/Loss */}
+				{/* Row 3: Memory, Swap */}
+				{/* Row 4: Disk Usage, Disk I/O */}
 				<div className="grid xl:grid-cols-2 gap-4">
 					<CpuChart {...coreProps} />
+					<LoadAverageChart chartData={chartData} grid={grid} dataEmpty={dataEmpty} />
+
+					<BandwidthChart {...coreProps} systemStats={systemStats} />
+					<ProbeChart chartData={chartData} grid={grid} dataEmpty={dataEmpty} />
+
+					<MemoryChart {...coreProps} />
+					<SwapChart chartData={chartData} grid={grid} dataEmpty={dataEmpty} systemStats={systemStats} />
+
+					<RootDiskCharts systemData={systemData} />
 
 					{hasContainers && (
 						<ContainerCpuChart
@@ -91,8 +104,6 @@ export default memo(function SystemDetail({ id }: { id: string }) {
 						/>
 					)}
 
-					<MemoryChart {...coreProps} />
-
 					{hasContainers && (
 						<ContainerMemoryChart
 							chartData={chartData}
@@ -102,10 +113,6 @@ export default memo(function SystemDetail({ id }: { id: string }) {
 							memoryConfig={containerChartConfigs.memory}
 						/>
 					)}
-
-					<RootDiskCharts systemData={systemData} />
-
-					<BandwidthChart {...coreProps} systemStats={systemStats} />
 
 					{hasContainers && (
 						<ContainerNetworkChart
@@ -117,12 +124,7 @@ export default memo(function SystemDetail({ id }: { id: string }) {
 						/>
 					)}
 
-					<SwapChart chartData={chartData} grid={grid} dataEmpty={dataEmpty} systemStats={systemStats} />
-
-					<LoadAverageChart chartData={chartData} grid={grid} dataEmpty={dataEmpty} />
-
 					<TemperatureChart {...coreProps} />
-
 					<BatteryChart {...coreProps} />
 
 					{hasGpuPowerData && <GpuPowerChart chartData={chartData} grid={grid} dataEmpty={dataEmpty} />}
@@ -159,7 +161,7 @@ export default memo(function SystemDetail({ id }: { id: string }) {
 					</TabsTrigger>
 					<TabsTrigger value="disk" className="w-full flex items-center gap-1.5">
 						<HardDriveIcon className="size-3.5" />
-						<Trans>Disk</Trans>
+						<Trans>Memory / Disk</Trans>
 					</TabsTrigger>
 					{hasGpu && (
 						<TabsTrigger value="gpu" className="w-full flex items-center gap-2">
@@ -184,12 +186,11 @@ export default memo(function SystemDetail({ id }: { id: string }) {
 				<TabsContent value="core" forceMount className={activeTab === "core" ? "contents" : "hidden"}>
 					<div className="grid xl:grid-cols-2 gap-4">
 						<CpuChart {...coreProps} />
-						<MemoryChart {...coreProps} />
 						<LoadAverageChart chartData={chartData} grid={grid} dataEmpty={dataEmpty} />
 						<BandwidthChart {...coreProps} systemStats={systemStats} />
+						<ProbeChart chartData={chartData} grid={grid} dataEmpty={dataEmpty} />
 						<TemperatureChart {...coreProps} setPageBottomExtraMargin={setPageBottomExtraMargin} />
 						<BatteryChart {...coreProps} />
-						<SwapChart chartData={chartData} grid={grid} dataEmpty={dataEmpty} systemStats={systemStats} />
 						{pageBottomExtraMargin > 0 && <div style={{ marginBottom: pageBottomExtraMargin }}></div>}
 					</div>
 				</TabsContent>
@@ -198,6 +199,8 @@ export default memo(function SystemDetail({ id }: { id: string }) {
 					{mountedTabs.has("disk") && (
 						<>
 							<div className="grid xl:grid-cols-2 gap-4">
+								<MemoryChart {...coreProps} />
+								<SwapChart chartData={chartData} grid={grid} dataEmpty={dataEmpty} systemStats={systemStats} />
 								<RootDiskCharts systemData={systemData} />
 							</div>
 							<ExtraFsCharts systemData={systemData} />

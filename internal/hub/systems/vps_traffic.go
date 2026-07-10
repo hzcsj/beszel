@@ -46,10 +46,13 @@ type VPSTrafficState struct {
 }
 
 type VPSTrafficManager struct {
-	mu      sync.Mutex
-	config  VPSTrafficConfig
-	states  map[string]*VPSTrafficState
-	dataDir string
+	mu            sync.Mutex
+	config        VPSTrafficConfig
+	states        map[string]*VPSTrafficState
+	dataDir       string
+	dirty         bool
+	lastFlush     time.Time
+	flushInterval time.Duration
 }
 
 func defaultConfig() VPSTrafficConfig {
@@ -63,9 +66,10 @@ func defaultConfig() VPSTrafficConfig {
 
 func NewVPSTrafficManager(dataDir string) *VPSTrafficManager {
 	m := &VPSTrafficManager{
-		states:  make(map[string]*VPSTrafficState),
-		dataDir: dataDir,
-		config:  defaultConfig(),
+		states:        make(map[string]*VPSTrafficState),
+		dataDir:       dataDir,
+		config:        defaultConfig(),
+		flushInterval: 30 * time.Second,
 	}
 	m.loadConfig()
 	m.loadState()
@@ -193,7 +197,8 @@ func mergeNodeConfig(base, override *VPSTrafficNodeConfig) {
 
 // DeriveTraffic computes VPSTrafficInfo from stats.ni and persists state.
 // dbTraffic is the per-system DB-level config (highest priority); nil if not set.
-func (m *VPSTrafficManager) DeriveTraffic(systemID, systemName string, dbTraffic *VPSTrafficNodeConfig, ni map[string][4]uint64) *system.VPSTrafficInfo {
+// isPersistent indicates this is the normal 60-second database write; always flushes dirty state.
+func (m *VPSTrafficManager) DeriveTraffic(systemID, systemName string, dbTraffic *VPSTrafficNodeConfig, ni map[string][4]uint64, isPersistent bool) *system.VPSTrafficInfo {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -217,7 +222,7 @@ func (m *VPSTrafficManager) DeriveTraffic(systemID, systemName string, dbTraffic
 			state.LastNicRx[name] = v[3]
 		}
 		m.states[systemID] = state
-		m.saveState()
+		m.flushState()
 		return m.buildInfo(state, nc, cycleStart, now)
 	}
 
@@ -261,8 +266,8 @@ func (m *VPSTrafficManager) DeriveTraffic(systemID, systemName string, dbTraffic
 	state.TotalRx += deltaRx
 	state.TotalTx += deltaTx
 
-	if state.CycleKey != cycleKey {
-		// Billing cycle boundary: cross-cycle delta goes to new cycle
+	cycleBoundary := state.CycleKey != cycleKey
+	if cycleBoundary {
 		state.CycleRx = deltaRx
 		state.CycleTx = deltaTx
 		state.CycleKey = cycleKey
@@ -272,8 +277,40 @@ func (m *VPSTrafficManager) DeriveTraffic(systemID, systemName string, dbTraffic
 	}
 
 	state.UpdatedAt = now.Unix()
-	m.saveState()
+	m.dirty = true
+
+	if isPersistent || cycleBoundary {
+		m.flushState()
+	} else {
+		m.throttledFlush(now)
+	}
 	return m.buildInfo(state, nc, cycleStart, now)
+}
+
+// flushState unconditionally writes state to disk.
+func (m *VPSTrafficManager) flushState() {
+	m.saveState()
+	m.dirty = false
+	m.lastFlush = time.Now()
+}
+
+// throttledFlush writes state only if the flush interval has elapsed.
+func (m *VPSTrafficManager) throttledFlush(now time.Time) {
+	if !m.dirty {
+		return
+	}
+	if now.Sub(m.lastFlush) >= m.flushInterval {
+		m.flushState()
+	}
+}
+
+// FlushDirty can be called externally (e.g. on shutdown) to persist pending state.
+func (m *VPSTrafficManager) FlushDirty() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.dirty {
+		m.flushState()
+	}
 }
 
 func (m *VPSTrafficManager) buildInfo(state *VPSTrafficState, nc VPSTrafficNodeConfig, cycleStart time.Time, now time.Time) *system.VPSTrafficInfo {
