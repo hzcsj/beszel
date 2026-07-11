@@ -39,11 +39,18 @@ import {
 	parseSemVer,
 	secondsToUptimeString,
 } from "@/lib/utils"
+import { getCycleTrafficColorClass, calculateCycleProgressPct } from "@/lib/traffic-billing"
 import { formatLoad } from "@/lib/format-load"
 import { batteryStateTranslations } from "@/lib/i18n"
 import type { SystemRecord } from "@/types"
 import { compareSystemsByOrder } from "@/lib/system-order"
-import { resolveProbeTargets, getProbeLossLevel, getListLatency, getListLoss } from "@/lib/probe-utils"
+import {
+	resolveCompactProbeTargets,
+	resolveProbeTargets,
+	getProbeLossLevel,
+	getListLatency,
+	getListLoss,
+} from "@/lib/probe-utils"
 import { SystemDialog } from "../add-system"
 import AlertButton from "../alerts/alert-button"
 import { $router, Link } from "../router"
@@ -195,7 +202,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			accessorFn: ({ info }) => info.cpu || undefined,
 			id: "cpu",
 			name: () => t`CPU`,
-			size: 105,
+			size: 120,
 			cell: viewMode === "table" ? TableCellEmbeddedMeter : TableCellWithMeter,
 			Icon: CpuIcon,
 			header: sortableHeader,
@@ -204,7 +211,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			accessorFn: ({ info }) => info.mp || undefined,
 			id: "memory",
 			name: () => t`Memory`,
-			size: 105,
+			size: 120,
 			cell: viewMode === "table" ? TableCellEmbeddedMeter : TableCellWithMeter,
 			Icon: MemoryStickIcon,
 			header: sortableHeader,
@@ -213,7 +220,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			accessorFn: ({ info }) => info.dp || undefined,
 			id: "disk",
 			name: () => t`Disk`,
-			size: 105,
+			size: 120,
 			cell: (info: CellContext<SystemRecord, unknown>) =>
 				info.row.original.info.efs
 					? DiskCellWithMultiple(info, viewMode)
@@ -322,16 +329,33 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 				const rx = formatBytes(vt.crx ?? 0)
 				const tx = formatBytes(vt.ctx ?? 0)
 
-				const quotaPct = vt.quota ? ((vt.bill ?? 0) / vt.quota) * 100 : 0
-				const projPct = vt.quota ? ((vt.proj ?? 0) / vt.quota) * 100 : 0
-				const warnClass = quotaPct >= 90 ? "text-red-500" : quotaPct >= 80 || projPct > 100 ? "text-yellow-500" : ""
+				const now = new Date()
+				const warnClass = getCycleTrafficColorClass({
+					billableBytes: vt.bill ?? 0,
+					quotaBytes: vt.quota ?? 0,
+					cycleStart: vt.cs ?? "",
+					resetDay: vt.rd ?? 1,
+					now,
+				})
 
 				const tooltipLines: string[] = []
 				if (vt.quota) {
+					const quotaPct = ((vt.bill ?? 0) / vt.quota) * 100
 					const q = formatBytes(vt.quota)
 					const quotaStr = `${decimalString(q.value, 2)} ${q.unit}`
 					const pctStr = decimalString(quotaPct, 1)
 					tooltipLines.push(t`Quota: ${quotaStr} (${pctStr}%)`)
+					const cycleProgress = calculateCycleProgressPct({
+						cycleStart: vt.cs ?? "",
+						resetDay: vt.rd ?? 1,
+						now,
+					})
+					if (cycleProgress !== null) {
+						const progressStr = decimalString(cycleProgress, 1)
+						const usageStr = decimalString(quotaPct, 1)
+						tooltipLines.push(t`Cycle progress: ${progressStr}%`)
+						tooltipLines.push(t`Usage: ${usageStr}%`)
+					}
 				}
 				if (vt.proj) {
 					const p = formatBytes(vt.proj)
@@ -430,7 +454,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 		},
 		{
 			accessorFn: ({ info }) => {
-				const resolved = resolveProbeTargets(info.vp)
+				const resolved = resolveCompactProbeTargets(info.vp)
 				if (resolved.length === 0) return undefined
 				let worstLoss = 0
 				let worstLat = 0
@@ -454,7 +478,9 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 				const resolved = resolveProbeTargets(vp)
 				if (resolved.length === 0) return null
 
-				const parts = resolved.map((rt) => {
+				// The compact list remains bounded to the three primary probes. The
+				// tooltip below intentionally uses the full resolved set (up to four).
+				const parts = resolveCompactProbeTargets(vp).map((rt) => {
 					const p = rt.stats
 					if (p.local) return { id: rt.id, latStr: t`Local`, level: "muted" as const }
 					const lat = getListLatency(p)
@@ -700,7 +726,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			name: () => t({ message: "Actions", comment: "Table column" }),
 			size: 50,
 			cell: ({ row }) => (
-				<div className="relative z-10 flex justify-end items-center gap-1 -ms-3">
+				<div className="relative z-10 flex justify-center items-center gap-1">
 					<AlertButton system={row.original} />
 					<ActionsButton system={row.original} />
 				</div>
@@ -717,7 +743,10 @@ function sortableHeader(context: HeaderContext<SystemRecord, unknown>) {
 	return (
 		<Button
 			variant="ghost"
-			className={cn("h-9 px-3 flex duration-50", isSorted && "bg-accent/70 light:bg-accent text-accent-foreground/90")}
+			className={cn(
+				"h-9 px-3 flex w-full justify-center duration-50",
+				isSorted && "bg-accent/70 light:bg-accent text-accent-foreground/90"
+			)}
 			onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 		>
 			{Icon && <Icon className="me-2 size-4" />}

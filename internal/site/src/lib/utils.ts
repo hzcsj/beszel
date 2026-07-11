@@ -245,6 +245,8 @@ const unitPromotion: Record<string, { factor: number; next: string }> = {
 	"GB/s": { factor: 1024, next: "TB/s" },
 	TB: { factor: 1024, next: "PB" },
 	"TB/s": { factor: 1024, next: "PB/s" },
+	PB: { factor: 1024, next: "EB" },
+	"PB/s": { factor: 1024, next: "EB/s" },
 	b: { factor: 1000, next: "Kb" },
 	bps: { factor: 1000, next: "Kbps" },
 	Kb: { factor: 1000, next: "Mb" },
@@ -253,22 +255,26 @@ const unitPromotion: Record<string, { factor: number; next: string }> = {
 	Mbps: { factor: 1000, next: "Gbps" },
 	Gb: { factor: 1000, next: "Tb" },
 	Gbps: { factor: 1000, next: "Tbps" },
+	Tb: { factor: 1000, next: "Pb" },
+	Tbps: { factor: 1000, next: "Pbps" },
+	Pb: { factor: 1000, next: "Eb" },
+	Pbps: { factor: 1000, next: "Ebps" },
 }
 
 /** Format a metric value compactly with its unit, promoting the unit when rounding exceeds 999. */
 export function formatCompactWithUnit(value: number, unit: string): string {
 	if (value === 0 || !Number.isFinite(value)) return `0${unit}`
 	const neg = value < 0
-	const abs = Math.abs(value)
+	let abs = Math.abs(value)
 	let num = compactMetricNumber(abs)
 	let finalUnit = unit
 
-	if (Number(num) >= 1000) {
-		const promo = unitPromotion[unit]
-		if (promo) {
-			num = compactMetricNumber(abs / promo.factor)
-			finalUnit = promo.next
-		}
+	while (Number(num) >= 1000) {
+		const promo = unitPromotion[finalUnit]
+		if (!promo) break
+		abs /= promo.factor
+		finalUnit = promo.next
+		num = compactMetricNumber(abs)
 	}
 
 	return (neg ? "-" : "") + num + finalUnit

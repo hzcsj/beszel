@@ -150,7 +150,7 @@ type Info struct {
 	// LoadAvg5       float64 `json:"l5,omitempty" cbor:"16,keyasint,omitempty"`  // deprecated - use `la` array instead
 	// LoadAvg15      float64 `json:"l15,omitempty" cbor:"17,keyasint,omitempty"` // deprecated - use `la` array instead
 
-	BandwidthBytes       uint64             `json:"bb" cbor:"18,keyasint"`
+	BandwidthBytes       uint64             `json:"bb,omitempty" cbor:"18,keyasint"`
 	LoadAvg              [3]float64         `json:"la,omitempty" cbor:"19,keyasint"`
 	ConnectionType       ConnectionType     `json:"ct,omitempty" cbor:"20,keyasint,omitempty,omitzero"`
 	ExtraFsPct           map[string]float64 `json:"efs,omitempty" cbor:"21,keyasint,omitempty"`
@@ -179,7 +179,7 @@ type VPSTrafficInfo struct {
 type VPSProbeTargetStats struct {
 	LatencyMs          float64 `json:"lat,omitempty" cbor:"0,keyasint,omitempty"`
 	LossPct            float64 `json:"loss,omitempty" cbor:"1,keyasint,omitempty"`
-	Success            bool    `json:"ok" cbor:"2,keyasint"`
+	Success            bool    `json:"ok,omitempty" cbor:"2,keyasint"`
 	Samples            uint16  `json:"n,omitempty" cbor:"3,keyasint,omitempty"`
 	Updated            int64   `json:"ts,omitempty" cbor:"4,keyasint,omitempty"`
 	Target             string  `json:"target,omitempty" cbor:"5,keyasint,omitempty"`

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import {
 	getProbeLossLevel,
+	resolveCompactProbeTargets,
 	resolveProbeTargets,
 	getListLatency,
 	getListLoss,
@@ -34,6 +35,19 @@ describe("getProbeLossLevel", () => {
 	})
 	test("100% loss with ok=false is critical, not muted", () => {
 		expect(getProbeLossLevel(100, false, false)).toBe("critical")
+	})
+})
+
+describe("resolveCompactProbeTargets", () => {
+	test("returns only the first three ordered targets while full resolution keeps four", () => {
+		const vp: Record<string, VPSProbeTargetStats> = {
+			cross: { ok: true, pos: 4, label: "HK" },
+			cm: { ok: true, pos: 3, label: "CM" },
+			ct: { ok: true, pos: 1, label: "CT" },
+			cu: { ok: true, pos: 2, label: "CU" },
+		}
+		expect(resolveProbeTargets(vp).map((r) => r.id)).toEqual(["ct", "cu", "cm", "cross"])
+		expect(resolveCompactProbeTargets(vp).map((r) => r.id)).toEqual(["ct", "cu", "cm"])
 	})
 })
 
@@ -97,25 +111,36 @@ describe("resolveProbeTargets", () => {
 		expect(result[1].pos).toBe(0)
 	})
 
-	test("pos outside 1-3 treated as 0", () => {
+	test("pos 4 is valid and values above 4 fall back to 0", () => {
 		const vp: Record<string, VPSProbeTargetStats> = {
 			x: { ok: true, pos: 4 },
 			y: { ok: true, pos: 1 },
+			z: { ok: true, pos: 5 },
 		}
 		const result = resolveProbeTargets(vp)
 		expect(result[0].id).toBe("y")
 		expect(result[0].pos).toBe(1)
 		expect(result[1].id).toBe("x")
-		expect(result[1].pos).toBe(0)
+		expect(result[1].pos).toBe(4)
+		expect(result[2].id).toBe("z")
+		expect(result[2].pos).toBe(0)
 	})
 
-	test("0/1/2/3 targets", () => {
+	test("0/1/2/3/4 targets", () => {
 		expect(resolveProbeTargets({})).toHaveLength(0)
 		expect(resolveProbeTargets({ a: { ok: true, pos: 1 } })).toHaveLength(1)
 		expect(resolveProbeTargets({ a: { ok: true, pos: 1 }, b: { ok: true, pos: 2 } })).toHaveLength(2)
 		expect(
 			resolveProbeTargets({ a: { ok: true, pos: 1 }, b: { ok: true, pos: 2 }, c: { ok: true, pos: 3 } })
 		).toHaveLength(3)
+		expect(
+			resolveProbeTargets({
+				a: { ok: true, pos: 1 },
+				b: { ok: true, pos: 2 },
+				c: { ok: true, pos: 3 },
+				d: { ok: true, pos: 4 },
+			})
+		).toHaveLength(4)
 	})
 })
 
@@ -188,14 +213,17 @@ describe("getDetailLoss", () => {
 })
 
 describe("getDynamicProbeColor", () => {
-	test("returns different colors for 0,1,2", () => {
+	test("returns different colors for 0,1,2,3", () => {
 		const c0 = getDynamicProbeColor(0)
 		const c1 = getDynamicProbeColor(1)
 		const c2 = getDynamicProbeColor(2)
+		const c3 = getDynamicProbeColor(3)
 		expect(c0).not.toBe(c1)
 		expect(c1).not.toBe(c2)
+		expect(c2).not.toBe(c3)
+		expect(c3).not.toBe(c0)
 	})
 	test("wraps around", () => {
-		expect(getDynamicProbeColor(3)).toBe(getDynamicProbeColor(0))
+		expect(getDynamicProbeColor(4)).toBe(getDynamicProbeColor(0))
 	})
 })

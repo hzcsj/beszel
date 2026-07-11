@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/url"
 	"strings"
 	"sync"
@@ -403,23 +404,72 @@ type SystemListSummary struct {
 
 const (
 	maxSummaryTargetLen   = 40
+	minSummaryTargetLen   = len(summaryTargetEllipsis)
+	maxListSummaryBytes   = 1024
 	summaryTargetEllipsis = "…"
 )
 
-func truncateSummaryTarget(target string) string {
-	if len(target) <= maxSummaryTargetLen {
+func roundSummaryFloat(value float64) float64 {
+	return math.Round(value*100) / 100
+}
+
+func truncateSummaryTargetTo(target string, maxLen int) string {
+	if len(target) <= maxLen {
 		return target
 	}
 
-	end := maxSummaryTargetLen - len(summaryTargetEllipsis)
+	end := maxLen - len(summaryTargetEllipsis)
 	for end > 0 && !utf8.ValidString(target[:end]) {
 		end--
 	}
 	return target[:end] + summaryTargetEllipsis
 }
 
+func truncateSummaryTarget(target string) string {
+	return truncateSummaryTargetTo(target, maxSummaryTargetLen)
+}
+
+func fitFourTargetSummary(summary *SystemListSummary, source system.VPSProbeStats) {
+	payload, err := json.Marshal(summary)
+	if err != nil || len(payload) <= maxListSummaryBytes {
+		return
+	}
+
+	primaryCount := 0
+	for _, v := range summary.Info.VPSProbe {
+		if v.Position >= 1 && v.Position <= 3 {
+			primaryCount++
+		}
+	}
+	if primaryCount == 0 {
+		return
+	}
+
+	excess := len(payload) - maxListSummaryBytes
+	limit := maxSummaryTargetLen - (excess+primaryCount-1)/primaryCount
+	if limit < minSummaryTargetLen {
+		limit = minSummaryTargetLen
+	}
+	applyLimit := func(maxLen int) {
+		for id, v := range summary.Info.VPSProbe {
+			if v.Position < 1 || v.Position > 3 {
+				continue
+			}
+			v.Target = truncateSummaryTargetTo(source[id].Target, maxLen)
+			summary.Info.VPSProbe[id] = v
+		}
+	}
+	applyLimit(limit)
+
+	payload, err = json.Marshal(summary)
+	if err == nil && len(payload) > maxListSummaryBytes && limit > minSummaryTargetLen {
+		applyLimit(minSummaryTargetLen)
+	}
+}
+
 func buildListSummary(systemID string, data *system.CombinedData) SystemListSummary {
 	info := data.Info
+	sourceProbe := info.VPSProbe
 	info.Hostname = ""
 	info.KernelVersion = ""
 	info.CpuModel = ""
@@ -430,14 +480,30 @@ func buildListSummary(systemID string, data *system.CombinedData) SystemListSumm
 	if info.VPSProbe != nil {
 		stripped := make(system.VPSProbeStats, len(info.VPSProbe))
 		for k, v := range info.VPSProbe {
+			// Position four is hover/detail-only in the systems list. Keep the
+			// fields needed by its tooltip here; rt_metrics and persisted history
+			// still retain the complete target record.
+			if len(info.VPSProbe) == 4 && v.Position == 4 {
+				stripped[k] = system.VPSProbeTargetStats{
+					LatencyMs:          roundSummaryFloat(v.LatencyMs),
+					LossPct:            roundSummaryFloat(v.LossPct),
+					Samples:            v.Samples,
+					LatencyAvgWindowMs: roundSummaryFloat(v.LatencyAvgWindowMs),
+					Local:              v.Local,
+					Label:              v.Label,
+					Position:           v.Position,
+				}
+				continue
+			}
+			target := truncateSummaryTarget(v.Target)
 			stripped[k] = system.VPSProbeTargetStats{
-				LatencyMs:          v.LatencyMs,
-				LossPct:            v.LossPct,
+				LatencyMs:          roundSummaryFloat(v.LatencyMs),
+				LossPct:            roundSummaryFloat(v.LossPct),
 				Success:            v.Success,
 				Samples:            v.Samples,
 				Updated:            v.Updated,
-				Target:             truncateSummaryTarget(v.Target),
-				LatencyAvgWindowMs: v.LatencyAvgWindowMs,
+				Target:             target,
+				LatencyAvgWindowMs: roundSummaryFloat(v.LatencyAvgWindowMs),
 				Local:              v.Local,
 				Label:              v.Label,
 				Position:           v.Position,
@@ -445,11 +511,18 @@ func buildListSummary(systemID string, data *system.CombinedData) SystemListSumm
 		}
 		info.VPSProbe = stripped
 	}
-	return SystemListSummary{
+	if info.BandwidthByDirection != [2]uint64{} {
+		info.BandwidthBytes = 0
+	}
+	summary := SystemListSummary{
 		SystemID:  systemID,
 		Timestamp: time.Now().UnixMilli(),
 		Info:      info,
 	}
+	if len(sourceProbe) == 4 {
+		fitFourTargetSummary(&summary, sourceProbe)
+	}
+	return summary
 }
 
 func notify(app core.App, subscription string, data []byte) error {

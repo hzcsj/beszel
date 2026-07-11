@@ -560,6 +560,10 @@ msgstr "累计上传"
 msgid "Current state"
 msgstr "当前状态"
 
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Cycle progress: {progressStr}%"
+msgstr "账期进度: {progressStr}%"
+
 #. placeholder {0}: vt.cs
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Cycle start: {0}"
@@ -1991,6 +1995,10 @@ msgstr "使用"
 #: src/components/routes/system/charts/disk-charts.tsx
 msgid "Usage of root partition"
 msgstr "根分区的使用"
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Usage: {usageStr}%"
+msgstr "用量: {usageStr}%"
 
 #: src/components/routes/system/charts/memory-charts.tsx
 #: src/components/routes/system/charts/memory-charts.tsx

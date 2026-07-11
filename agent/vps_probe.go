@@ -82,7 +82,10 @@ var defaultProbeTargets = map[string]string{
 
 var idPattern = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
-const maxTargets = 3
+// Four targets are supported so proxy nodes can keep the three primary
+// carrier probes and add one cross-region probe. The compact systems list
+// still renders only the first three; detail views and tooltips use all four.
+const maxTargets = 4
 
 func newVPSProbeCollector() *VPSProbeCollector {
 	raw, exists := utils.GetEnv("BESZEL_AGENT_VPS_PROBE_CONFIG")

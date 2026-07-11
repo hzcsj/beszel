@@ -220,7 +220,13 @@ func (m *VPSTrafficManager) DeriveTraffic(systemID, systemName string, dbTraffic
 		for name, v := range ni {
 			state.LastNicTx[name] = v[2]
 			state.LastNicRx[name] = v[3]
+			state.CycleTx += v[2]
+			state.CycleRx += v[3]
 		}
+		// The current NIC counters are the best available bootstrap for the
+		// active billing cycle. Historical totals intentionally start at zero
+		// when tracking is first enabled, so the two series do not share an
+		// artificial common baseline.
 		m.states[systemID] = state
 		m.flushState()
 		return m.buildInfo(state, nc, cycleStart, now)

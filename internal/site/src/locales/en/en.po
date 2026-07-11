@@ -555,6 +555,10 @@ msgstr "Cumulative Upload"
 msgid "Current state"
 msgstr "Current state"
 
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Cycle progress: {progressStr}%"
+msgstr "Cycle progress: {progressStr}%"
+
 #. placeholder {0}: vt.cs
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Cycle start: {0}"
@@ -1991,6 +1995,10 @@ msgstr "Usage"
 #: src/components/routes/system/charts/disk-charts.tsx
 msgid "Usage of root partition"
 msgstr "Usage of root partition"
+
+#: src/components/systems-table/systems-table-columns.tsx
+msgid "Usage: {usageStr}%"
+msgstr "Usage: {usageStr}%"
 
 #: src/components/routes/system/charts/memory-charts.tsx
 #: src/components/routes/system/charts/memory-charts.tsx

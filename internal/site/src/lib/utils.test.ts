@@ -105,6 +105,15 @@ describe("formatCompactWithUnit", () => {
 		expect(result).not.toContain("1000")
 	})
 
+	test("1004 KB promotes to 0.98MB", () => {
+		expect(formatCompactWithUnit(1004, "KB")).toBe("0.98MB")
+	})
+
+	test("repeatedly promotes very large values without a four-digit mantissa", () => {
+		expect(formatCompactWithUnit(1024 ** 2, "TB")).toBe("1.00EB")
+		expect(formatCompactWithUnit(1000 ** 2, "Tbps")).toBe("1.00Ebps")
+	})
+
 	test("NaN keeps unit", () => {
 		expect(formatCompactWithUnit(NaN, "MB/s")).toBe("0MB/s")
 	})

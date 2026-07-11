@@ -17,7 +17,12 @@ export interface ResolvedProbeTarget {
 	stats: VPSProbeTargetStats
 }
 
-const defaultDynColors = ["hsl(217, 91%, 60%)", "hsl(142, 71%, 45%)", "hsl(25, 95%, 53%)"] as const
+const defaultDynColors = [
+	"hsl(217, 91%, 60%)",
+	"hsl(142, 71%, 45%)",
+	"hsl(25, 95%, 53%)",
+	"hsl(271, 81%, 56%)",
+] as const
 
 export function getDynamicProbeColor(index: number): string {
 	return defaultDynColors[index % defaultDynColors.length]
@@ -28,7 +33,7 @@ export function resolveProbeTargets(vp: Record<string, VPSProbeTargetStats> | un
 	const entries: ResolvedProbeTarget[] = []
 	for (const [id, stats] of Object.entries(vp)) {
 		const rawPos = stats.pos ?? 0
-		const validPos = rawPos >= 1 && rawPos <= 3 ? rawPos : 0
+		const validPos = rawPos >= 1 && rawPos <= 4 ? rawPos : 0
 		entries.push({
 			id,
 			label: stats.label || id.toUpperCase(),
@@ -54,6 +59,11 @@ export function resolveProbeTargets(vp: Record<string, VPSProbeTargetStats> | un
 		return a.id.localeCompare(b.id)
 	})
 	return entries
+}
+
+/** The systems table shows only the three primary targets; hover/detail keep all targets. */
+export function resolveCompactProbeTargets(vp: Record<string, VPSProbeTargetStats> | undefined): ResolvedProbeTarget[] {
+	return resolveProbeTargets(vp).slice(0, 3)
 }
 
 export function getListLatency(p: VPSProbeTargetStats): number | undefined {

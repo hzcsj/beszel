@@ -76,11 +76,16 @@ export default function SystemsTable() {
 		battery: false,
 		services: false,
 		agent: false,
+		totalTraffic: false,
 	})
 
 	useEffect(() => {
-		if (columnVisibility && !("agent" in columnVisibility)) {
-			setColumnVisibility({ ...columnVisibility, agent: false })
+		if (!columnVisibility) return
+		const patch: Partial<VisibilityState> = {}
+		if (!("agent" in columnVisibility)) patch.agent = false
+		if (!("totalTraffic" in columnVisibility)) patch.totalTraffic = false
+		if (Object.keys(patch).length > 0) {
+			setColumnVisibility({ ...columnVisibility, ...patch })
 		}
 	}, [])
 
@@ -445,9 +450,15 @@ const SystemTableRow = memo(
 								width: cell.column.getSize(),
 								height: virtualRow.size,
 							}}
-							className="py-0 ps-4.5"
+							className={cn("py-0 ps-4.5", cell.column.id !== "system" && "text-center")}
 						>
-							{flexRender(cell.column.columnDef.cell, cell.getContext())}
+							{cell.column.id !== "system" ? (
+								<div className="flex items-center justify-center w-full">
+									{flexRender(cell.column.columnDef.cell, cell.getContext())}
+								</div>
+							) : (
+								flexRender(cell.column.columnDef.cell, cell.getContext())
+							)}
 						</TableCell>
 					))}
 				</TableRow>

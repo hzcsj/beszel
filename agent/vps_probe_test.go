@@ -117,7 +117,7 @@ func TestParseArrayTargets3Targets(t *testing.T) {
 	}
 }
 
-func TestParseArrayTargetsOver3Rejected(t *testing.T) {
+func TestParseArrayTargetsFourAccepted(t *testing.T) {
 	raw := json.RawMessage(`[
 		{"id":"a","label":"A","address":"1.2.3.4:80"},
 		{"id":"b","label":"B","address":"1.2.3.4:80"},
@@ -125,8 +125,27 @@ func TestParseArrayTargetsOver3Rejected(t *testing.T) {
 		{"id":"d","label":"D","address":"1.2.3.4:80"}
 	]`)
 	result := parseArrayTargets(raw)
+	if len(result) != 4 {
+		t.Fatalf("expected 4 targets, got %d", len(result))
+	}
+	for i, target := range result {
+		if target.pos != uint8(i+1) {
+			t.Errorf("target %d: got pos %d, want %d", i, target.pos, i+1)
+		}
+	}
+}
+
+func TestParseArrayTargetsOver4Rejected(t *testing.T) {
+	raw := json.RawMessage(`[
+		{"id":"a","label":"A","address":"1.2.3.4:80"},
+		{"id":"b","label":"B","address":"1.2.3.4:80"},
+		{"id":"c","label":"C","address":"1.2.3.4:80"},
+		{"id":"d","label":"D","address":"1.2.3.4:80"},
+		{"id":"e","label":"E","address":"1.2.3.4:80"}
+	]`)
+	result := parseArrayTargets(raw)
 	if result != nil {
-		t.Errorf("expected nil for >3 targets, got %d", len(result))
+		t.Errorf("expected nil for >4 targets, got %d", len(result))
 	}
 }
 
@@ -170,10 +189,11 @@ func TestParseArrayTargetsOrderPreserved(t *testing.T) {
 	raw := json.RawMessage(`[
 		{"id":"cm","label":"CM","address":"cm.example.com:80"},
 		{"id":"ct","label":"CT","address":"ct.example.com:80"},
-		{"id":"cu","label":"CU","address":"cu.example.com:80"}
+		{"id":"cu","label":"CU","address":"cu.example.com:80"},
+		{"id":"hk","label":"HK","address":"hk.example.com:80"}
 	]`)
 	result := parseArrayTargets(raw)
-	expected := []string{"cm", "ct", "cu"}
+	expected := []string{"cm", "ct", "cu", "hk"}
 	for i, want := range expected {
 		if result[i].id != want {
 			t.Errorf("position %d: want %q, got %q", i, want, result[i].id)

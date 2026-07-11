@@ -13,9 +13,16 @@ function roundHalfUp(num: number, decimals: number): number {
  */
 export function formatLoad(num: number): string {
 	if (!Number.isFinite(num) || num < 0) return "0.00"
-	const r2 = roundHalfUp(num, 2)
-	if (r2 < 10) return r2.toFixed(2)
-	const r1 = roundHalfUp(num, 1)
-	if (r1 < 100) return r1.toFixed(1)
-	return Math.round(num).toString()
+	const suffixes = ["", "K", "M", "G", "T", "P", "E"] as const
+	let scaled = num
+	let suffixIndex = 0
+	while (roundHalfUp(scaled, 0) >= 1000 && suffixIndex < suffixes.length - 1) {
+		scaled /= 1000
+		suffixIndex++
+	}
+	const r2 = roundHalfUp(scaled, 2)
+	if (r2 < 10) return `${r2.toFixed(2)}${suffixes[suffixIndex]}`
+	const r1 = roundHalfUp(scaled, 1)
+	if (r1 < 100) return `${r1.toFixed(1)}${suffixes[suffixIndex]}`
+	return `${Math.round(scaled)}${suffixes[suffixIndex]}`
 }

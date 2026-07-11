@@ -97,8 +97,11 @@ func TestFirstSampleInitialization(t *testing.T) {
 	if info == nil {
 		t.Fatal("expected non-nil VPSTrafficInfo on first sample")
 	}
-	if info.CycleRxBytes != 0 || info.CycleTxBytes != 0 {
-		t.Errorf("first sample should show zero cycle: got crx=%d, ctx=%d", info.CycleRxBytes, info.CycleTxBytes)
+	if info.CycleRxBytes != 2_000_000 || info.CycleTxBytes != 1_000_000 {
+		t.Errorf("first sample should bootstrap cycle from NIC totals: got crx=%d, ctx=%d", info.CycleRxBytes, info.CycleTxBytes)
+	}
+	if info.TotalRxBytes != 0 || info.TotalTxBytes != 0 {
+		t.Errorf("first sample historical totals should start at zero: got trx=%d, ttx=%d", info.TotalRxBytes, info.TotalTxBytes)
 	}
 	if info.QuotaBytes != 2199023255552 {
 		t.Errorf("quota mismatch: got %d", info.QuotaBytes)
@@ -121,14 +124,14 @@ func TestNormalPositiveDeltas(t *testing.T) {
 	if info == nil {
 		t.Fatal("expected non-nil")
 	}
-	if info.CycleTxBytes != 50_000 {
-		t.Errorf("expected CycleTx=50000, got %d", info.CycleTxBytes)
+	if info.CycleTxBytes != 150_000 {
+		t.Errorf("expected CycleTx=150000, got %d", info.CycleTxBytes)
 	}
-	if info.CycleRxBytes != 100_000 {
-		t.Errorf("expected CycleRx=100000, got %d", info.CycleRxBytes)
+	if info.CycleRxBytes != 300_000 {
+		t.Errorf("expected CycleRx=300000, got %d", info.CycleRxBytes)
 	}
-	if info.BillableBytes != 150_000 {
-		t.Errorf("expected BillableBytes=150000 (sum), got %d", info.BillableBytes)
+	if info.BillableBytes != 450_000 {
+		t.Errorf("expected BillableBytes=450000 (sum), got %d", info.BillableBytes)
 	}
 	if info.TotalTxBytes != 50_000 || info.TotalRxBytes != 100_000 {
 		t.Errorf("totals mismatch: ttx=%d trx=%d", info.TotalTxBytes, info.TotalRxBytes)
@@ -152,11 +155,11 @@ func TestCounterReset(t *testing.T) {
 	if info == nil {
 		t.Fatal("expected non-nil")
 	}
-	if info.CycleTxBytes != 550_000 {
-		t.Errorf("expected CycleTx=550000, got %d", info.CycleTxBytes)
+	if info.CycleTxBytes != 1_550_000 {
+		t.Errorf("expected CycleTx=1550000, got %d", info.CycleTxBytes)
 	}
-	if info.CycleRxBytes != 530_000 {
-		t.Errorf("expected CycleRx=530000, got %d", info.CycleRxBytes)
+	if info.CycleRxBytes != 2_530_000 {
+		t.Errorf("expected CycleRx=2530000, got %d", info.CycleRxBytes)
 	}
 }
 
@@ -172,7 +175,7 @@ func TestCounterResetZero(t *testing.T) {
 
 	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 0, 0}}, true)
 	// counter dropped to 0 → delta must be 0, not the old total
-	if info.CycleTxBytes != 200_000 || info.CycleRxBytes != 200_000 {
+	if info.CycleTxBytes != 700_000 || info.CycleRxBytes != 800_000 {
 		t.Errorf("zero counter should not spike: ctx=%d crx=%d", info.CycleTxBytes, info.CycleRxBytes)
 	}
 }
@@ -286,7 +289,7 @@ func TestStatePersistenceAndReload(t *testing.T) {
 	if !ok {
 		t.Fatal("expected state to be loaded from disk")
 	}
-	if state.CycleTx != 50_000 || state.CycleRx != 100_000 {
+	if state.CycleTx != 150_000 || state.CycleRx != 300_000 {
 		t.Errorf("reloaded state mismatch: CycleTx=%d CycleRx=%d", state.CycleTx, state.CycleRx)
 	}
 	if _, err := os.Stat(filepath.Join(dir, trafficStateFile)); os.IsNotExist(err) {
@@ -330,11 +333,11 @@ func TestMultipleInterfaces(t *testing.T) {
 	if info == nil {
 		t.Fatal("expected non-nil")
 	}
-	if info.CycleTxBytes != 40_000 {
-		t.Errorf("expected CycleTx=40000, got %d", info.CycleTxBytes)
+	if info.CycleTxBytes != 190_000 {
+		t.Errorf("expected CycleTx=190000, got %d", info.CycleTxBytes)
 	}
-	if info.CycleRxBytes != 70_000 {
-		t.Errorf("expected CycleRx=70000, got %d", info.CycleRxBytes)
+	if info.CycleRxBytes != 350_000 {
+		t.Errorf("expected CycleRx=350000, got %d", info.CycleRxBytes)
 	}
 }
 
@@ -350,11 +353,11 @@ func TestSingleNicReset(t *testing.T) {
 	// eth0 reboots, counter goes to 10_000
 	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 10_000, 20_000}}, true)
 	// delta1: tx=200k, rx=400k.  delta2 (reset): tx=10k, rx=20k
-	if info.CycleTxBytes != 210_000 {
-		t.Errorf("single NIC reset CycleTx: want 210000, got %d", info.CycleTxBytes)
+	if info.CycleTxBytes != 1_210_000 {
+		t.Errorf("single NIC reset CycleTx: want 1210000, got %d", info.CycleTxBytes)
 	}
-	if info.CycleRxBytes != 420_000 {
-		t.Errorf("single NIC reset CycleRx: want 420000, got %d", info.CycleRxBytes)
+	if info.CycleRxBytes != 2_420_000 {
+		t.Errorf("single NIC reset CycleRx: want 2420000, got %d", info.CycleRxBytes)
 	}
 }
 
@@ -375,11 +378,11 @@ func TestMultiNicOneReset(t *testing.T) {
 	}, true)
 	// eth0: tx delta=100k, rx delta=200k
 	// eth1: tx delta=5k (reset), rx delta=8k (reset)
-	if info.CycleTxBytes != 105_000 {
-		t.Errorf("multi NIC one reset CycleTx: want 105000, got %d", info.CycleTxBytes)
+	if info.CycleTxBytes != 1_605_000 {
+		t.Errorf("multi NIC one reset CycleTx: want 1605000, got %d", info.CycleTxBytes)
 	}
-	if info.CycleRxBytes != 208_000 {
-		t.Errorf("multi NIC one reset CycleRx: want 208000, got %d", info.CycleRxBytes)
+	if info.CycleRxBytes != 2_808_000 {
+		t.Errorf("multi NIC one reset CycleRx: want 2808000, got %d", info.CycleRxBytes)
 	}
 }
 
@@ -400,11 +403,11 @@ func TestNicDisappears(t *testing.T) {
 		"eth0": {0, 0, 120_000, 250_000},
 	}, true)
 	// only eth0 delta should count: tx +20k, rx +50k
-	if info.CycleTxBytes != 20_000 {
-		t.Errorf("NIC disappear CycleTx: want 20000, got %d", info.CycleTxBytes)
+	if info.CycleTxBytes != 170_000 {
+		t.Errorf("NIC disappear CycleTx: want 170000, got %d", info.CycleTxBytes)
 	}
-	if info.CycleRxBytes != 50_000 {
-		t.Errorf("NIC disappear CycleRx: want 50000, got %d", info.CycleRxBytes)
+	if info.CycleRxBytes != 330_000 {
+		t.Errorf("NIC disappear CycleRx: want 330000, got %d", info.CycleRxBytes)
 	}
 }
 
@@ -425,11 +428,11 @@ func TestNewNicAppears(t *testing.T) {
 		"eth1": {0, 0, 5_000_000, 8_000_000}, // new NIC → baseline only
 	}, true)
 	// only eth0 delta should count
-	if info.CycleTxBytes != 20_000 {
-		t.Errorf("new NIC appear CycleTx: want 20000, got %d", info.CycleTxBytes)
+	if info.CycleTxBytes != 120_000 {
+		t.Errorf("new NIC appear CycleTx: want 120000, got %d", info.CycleTxBytes)
 	}
-	if info.CycleRxBytes != 50_000 {
-		t.Errorf("new NIC appear CycleRx: want 50000, got %d", info.CycleRxBytes)
+	if info.CycleRxBytes != 250_000 {
+		t.Errorf("new NIC appear CycleRx: want 250000, got %d", info.CycleRxBytes)
 	}
 
 	// third sample: now both NICs contribute deltas
@@ -438,11 +441,11 @@ func TestNewNicAppears(t *testing.T) {
 		"eth1": {0, 0, 5_010_000, 8_020_000},
 	}, true)
 	// eth0: tx +10k, rx +10k.  eth1: tx +10k, rx +20k
-	if info2.CycleTxBytes != 40_000 {
-		t.Errorf("new NIC 2nd sample CycleTx: want 40000, got %d", info2.CycleTxBytes)
+	if info2.CycleTxBytes != 140_000 {
+		t.Errorf("new NIC 2nd sample CycleTx: want 140000, got %d", info2.CycleTxBytes)
 	}
-	if info2.CycleRxBytes != 80_000 {
-		t.Errorf("new NIC 2nd sample CycleRx: want 80000, got %d", info2.CycleRxBytes)
+	if info2.CycleRxBytes != 280_000 {
+		t.Errorf("new NIC 2nd sample CycleRx: want 280000, got %d", info2.CycleRxBytes)
 	}
 }
 
@@ -494,9 +497,9 @@ func TestValidBillingModeOverride(t *testing.T) {
 	if info.BillingMode != BillingModeTxOnly {
 		t.Errorf("DeriveTraffic should return tx_only: got %s", info.BillingMode)
 	}
-	// tx_only: billable = cycleTx only = 200
-	if info.BillableBytes != 200 {
-		t.Errorf("tx_only billable should be 200, got %d", info.BillableBytes)
+	// tx_only: bootstrap 500 + delta 200
+	if info.BillableBytes != 700 {
+		t.Errorf("tx_only billable should be 700, got %d", info.BillableBytes)
 	}
 }
 
@@ -586,8 +589,8 @@ func TestDeriveTrafficWithDBConfig(t *testing.T) {
 	if info.BillingMode != BillingModeTxOnly {
 		t.Errorf("expected DB billingMode tx_only, got %s", info.BillingMode)
 	}
-	if info.BillableBytes != 50_000 {
-		t.Errorf("tx_only billable should be 50000 (cycleTx), got %d", info.BillableBytes)
+	if info.BillableBytes != 150_000 {
+		t.Errorf("tx_only billable should be 150000 (cycleTx), got %d", info.BillableBytes)
 	}
 	if info.QuotaBytes != 1_000_000 {
 		t.Errorf("quota should inherit from env default, got %d", info.QuotaBytes)
@@ -612,7 +615,7 @@ func TestRealtimeNoPersistentFlush(t *testing.T) {
 	}
 
 	state := m.states["sys1"]
-	if state.CycleTx != 20_000 || state.CycleRx != 50_000 {
+	if state.CycleTx != 120_000 || state.CycleRx != 250_000 {
 		t.Errorf("realtime delta mismatch: CycleTx=%d CycleRx=%d", state.CycleTx, state.CycleRx)
 	}
 }
@@ -646,13 +649,13 @@ func TestRealtimeThenPersistent(t *testing.T) {
 
 	ni2 := map[string][4]uint64{"eth0": {0, 0, 1500, 2500}}
 	info2 := m.DeriveTraffic("sys1", "node1", nil, ni2, false)
-	if info2.CycleTxBytes != 500 || info2.CycleRxBytes != 500 {
+	if info2.CycleTxBytes != 1500 || info2.CycleRxBytes != 2500 {
 		t.Errorf("realtime: CycleTx=%d CycleRx=%d", info2.CycleTxBytes, info2.CycleRxBytes)
 	}
 
 	ni3 := map[string][4]uint64{"eth0": {0, 0, 2000, 3500}}
 	info3 := m.DeriveTraffic("sys1", "node1", nil, ni3, true)
-	if info3.CycleTxBytes != 1000 || info3.CycleRxBytes != 1500 {
+	if info3.CycleTxBytes != 2000 || info3.CycleRxBytes != 3500 {
 		t.Errorf("persistent after realtime: CycleTx=%d CycleRx=%d", info3.CycleTxBytes, info3.CycleRxBytes)
 	}
 	if m.dirty {
@@ -683,7 +686,7 @@ func TestFlushDirty(t *testing.T) {
 	if !ok {
 		t.Fatal("state should be reloaded after FlushDirty")
 	}
-	if state.CycleTx != 100 || state.CycleRx != 100 {
+	if state.CycleTx != 200 || state.CycleRx != 300 {
 		t.Errorf("reloaded state mismatch: CycleTx=%d CycleRx=%d", state.CycleTx, state.CycleRx)
 	}
 }

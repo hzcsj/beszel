@@ -216,9 +216,10 @@ func TestBuildListSummaryPayloadSizeUnder1KB(t *testing.T) {
 				BillingMode:    "max_rx_tx",
 			},
 			VPSProbe: system.VPSProbeStats{
-				"abcdefghijklmnop": {Local: true, Updated: 1720000000, Target: maxAddr, Label: "电信联通移动探测移动端可", Position: 1},
+				"abcdefghijklmnop": {LatencyMs: 35.5, LossPct: 0.5, Success: true, Samples: 60, Updated: 1720000000, Target: maxAddr, LatencyAvgWindowMs: 36.5, Label: "电信联通移动探测移动端可", Position: 1},
 				"bcdefghijklmnopq": {LatencyMs: 25.678, LossPct: 1.2, Success: true, Samples: 60, Updated: 1720000000, Target: maxAddr, LatencyAvg1mMs: 26.789, LatencyAvgWindowMs: 27.890, LossPct1m: 1.5, Samples1m: 12, Label: "电信联通移动探测移动端可", Position: 2},
 				"cdefghijklmnopqr": {LatencyMs: 18.901, LossPct: 19.99, Success: true, Samples: 60, Updated: 1720000000, Target: maxAddr, LatencyAvg1mMs: 19.012, LatencyAvgWindowMs: 20.123, LossPct1m: 19.99, Samples1m: 12, Label: "电信联通移动探测移动端可", Position: 3},
+				"defghijklmnopqrs": {LatencyMs: 88.765, LossPct: 2.25, Success: true, Samples: 60, Updated: 1720000000, Target: maxAddr, LatencyAvg1mMs: 87.654, LatencyAvgWindowMs: 89.876, LossPct1m: 2.5, Samples1m: 12, Label: "电信联通移动探测移动端可", Position: 4},
 			},
 		},
 	}
@@ -226,12 +227,19 @@ func TestBuildListSummaryPayloadSizeUnder1KB(t *testing.T) {
 	summary := buildListSummary("sys-abc123def456", data)
 
 	for k, v := range summary.Info.VPSProbe {
-		if v.Target == "" {
-			if !v.Local {
-				t.Errorf("probe %q: target must be preserved (truncated) in summary", k)
+		if v.Position == 4 {
+			if v.Label == "" || v.LatencyAvgWindowMs == 0 || v.Samples == 0 {
+				t.Errorf("probe %q: hover fields missing from fourth target: %+v", k, v)
 			}
+			if v.Target != "" || v.Updated != 0 {
+				t.Errorf("probe %q: fourth target should omit list-only metadata: %+v", k, v)
+			}
+			continue
+		}
+		if v.Target == "" {
+			t.Errorf("probe %q: target must be preserved (truncated) in summary", k)
 		} else if len(v.Target) > maxSummaryTargetLen {
-			t.Errorf("probe %q: target len %d exceeds maxSummaryTargetLen %d", k, len(v.Target), maxSummaryTargetLen)
+			t.Errorf("probe %q: target len %d exceeds max target limit %d", k, len(v.Target), maxSummaryTargetLen)
 		} else if !utf8.ValidString(v.Target) {
 			t.Errorf("probe %q: target is not valid UTF-8: %q", k, v.Target)
 		} else if !strings.HasSuffix(v.Target, summaryTargetEllipsis) {
@@ -252,6 +260,25 @@ func TestBuildListSummaryPayloadSizeUnder1KB(t *testing.T) {
 		t.Errorf("summary payload is %d bytes, exceeds %d byte limit.\nPayload: %s", len(payload), maxBytes, string(payload))
 	}
 	t.Logf("summary payload size: %d bytes (limit %d)", len(payload), maxBytes)
+}
+
+func TestBuildListSummaryFourTargetsKeepShortPrimaryAddresses(t *testing.T) {
+	data := &system.CombinedData{Info: system.Info{VPSProbe: system.VPSProbeStats{
+		"ct": {LatencyMs: 10, LossPct: 1, Success: true, Samples: 10, Updated: 1, Target: "ct.example:80", LatencyAvgWindowMs: 11, Label: "CT", Position: 1},
+		"cu": {LatencyMs: 20, LossPct: 2, Success: true, Samples: 10, Updated: 1, Target: "cu.example:80", LatencyAvgWindowMs: 21, Label: "CU", Position: 2},
+		"cm": {LatencyMs: 30, LossPct: 3, Success: true, Samples: 10, Updated: 1, Target: "cm.example:80", LatencyAvgWindowMs: 31, Label: "CM", Position: 3},
+		"hk": {LatencyMs: 40, LossPct: 4, Success: true, Samples: 10, Updated: 1, Target: "hk.example:80", LatencyAvgWindowMs: 41, Label: "HK", Position: 4},
+	}}}
+
+	summary := buildListSummary("sys-four", data)
+	for _, id := range []string{"ct", "cu", "cm"} {
+		if got, want := summary.Info.VPSProbe[id].Target, data.Info.VPSProbe[id].Target; got != want {
+			t.Errorf("%s primary target: got %q, want %q", id, got, want)
+		}
+	}
+	if fourth := summary.Info.VPSProbe["hk"]; fourth.Target != "" || fourth.Label != "HK" || fourth.Position != 4 || fourth.LatencyAvgWindowMs != 41 {
+		t.Errorf("fourth hover target mismatch: %+v", fourth)
+	}
 }
 
 func TestTruncateSummaryTargetUTF8(t *testing.T) {
