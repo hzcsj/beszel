@@ -36,6 +36,7 @@ func (h *Hub) startServer(se *core.ServeEvent) error {
 			e.Response.Header().Del("X-Frame-Options")
 			e.Response.Header().Set("Content-Security-Policy", csp)
 		}
+		e.Response.Header().Set("Cache-Control", "no-store")
 		return e.HTML(http.StatusOK, html)
 	})
 	return nil

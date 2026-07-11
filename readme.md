@@ -22,6 +22,18 @@ It has a friendly web interface, simple configuration, and is ready to use out o
 - **Automatic backups**: Save to and restore from disk or S3-compatible storage.
 <!-- - **REST API**: Use or update your data in your own scripts and applications. -->
 
+### hzcsj VPS dashboard fork
+
+This public fork adds an operations-focused VPS dashboard on top of Beszel:
+
+- Billing-cycle and total traffic accounting with per-system reset day, quota, projection, and RX/TX display.
+- Ordered dynamic TCP probes: every Agent declares zero to three stable targets with custom IDs, labels, addresses, and optional local targets.
+- Compact loss-colored probe latency in the systems list and a dynamic dual-axis latency/loss detail chart.
+- Stable custom system ordering, a restricted readonly role, and English / Simplified Chinese UI builds.
+- Versioned GitHub Releases containing immutable Linux amd64 Hub and Agent binaries for pilot and production rollout.
+
+See the [V7 dynamic probe specification](spec/beszel-vps-dashboard-v7-dynamic-probes-order-tooltip.md) for the Agent configuration contract and compatibility behavior.
+
 ## Architecture
 
 Beszel consists of two main components: the **hub** and the **agent**.

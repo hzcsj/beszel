@@ -124,6 +124,7 @@ const {
 	isAdmin,
 	runIfSensitiveDetailsAllowed,
 	shouldInitializeAlertManager,
+	shouldShowProcessList,
 	shouldRedirectSettings,
 	updateUserSettings,
 } = await import("./api")
@@ -225,6 +226,13 @@ describe("readonly navigation and startup decisions", () => {
 		expect(shouldInitializeAlertManager()).toBe(false)
 		mockAuthStore.record = { role: "user" }
 		expect(shouldInitializeAlertManager()).toBe(true)
+	})
+
+	test("process list is hidden only for readonly users", () => {
+		mockAuthStore.record = { role: "readonly" }
+		expect(shouldShowProcessList()).toBe(false)
+		mockAuthStore.record = { role: "admin" }
+		expect(shouldShowProcessList()).toBe(true)
 	})
 })
 

@@ -83,6 +83,15 @@
 					}
 				}
 			}
+		},
+		{
+			"includes": ["src/locales/*/*.ts"],
+			"formatter": {
+				"enabled": false
+			},
+			"linter": {
+				"enabled": false
+			}
 		}
 	]
 }

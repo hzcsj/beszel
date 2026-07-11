@@ -3,6 +3,7 @@ import {
 	getProbeLossLevel,
 	resolveProbeTargets,
 	getListLatency,
+	getListLoss,
 	getDetailLat,
 	getDetailLoss,
 	getDynamicProbeColor,
@@ -133,6 +134,22 @@ describe("getListLatency", () => {
 	})
 	test("returns undefined for missing", () => {
 		expect(getListLatency({ ok: false })).toBeUndefined()
+	})
+})
+
+describe("getListLoss", () => {
+	test("infers zero loss when samples exist and loss is omitted", () => {
+		expect(getListLoss({ ok: true, n: 33 })).toBe(0)
+	})
+	test("returns and clamps explicit loss when samples exist", () => {
+		expect(getListLoss({ ok: true, n: 33, loss: 5.5 })).toBe(5.5)
+		expect(getListLoss({ ok: true, n: 33, loss: -5 })).toBe(0)
+		expect(getListLoss({ ok: true, n: 33, loss: 150 })).toBe(100)
+	})
+	test("returns undefined without samples or for local targets", () => {
+		expect(getListLoss({ ok: false })).toBeUndefined()
+		expect(getListLoss({ ok: true, n: 0, loss: 0 })).toBeUndefined()
+		expect(getListLoss({ ok: true, n: 33, local: true })).toBeUndefined()
 	})
 })
 

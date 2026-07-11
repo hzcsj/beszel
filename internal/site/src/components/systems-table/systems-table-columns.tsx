@@ -43,7 +43,7 @@ import { formatLoad } from "@/lib/format-load"
 import { batteryStateTranslations } from "@/lib/i18n"
 import type { SystemRecord } from "@/types"
 import { compareSystemsByOrder } from "@/lib/system-order"
-import { resolveProbeTargets, getProbeLossLevel, getListLatency } from "@/lib/probe-utils"
+import { resolveProbeTargets, getProbeLossLevel, getListLatency, getListLoss } from "@/lib/probe-utils"
 import { SystemDialog } from "../add-system"
 import AlertButton from "../alerts/alert-button"
 import { $router, Link } from "../router"
@@ -511,44 +511,27 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 										)
 									}
 									const lat = getListLatency(p)
-									const latStr = lat != null ? `${Math.round(lat)} ms` : "--"
-									const lossStr = p.loss != null ? `${decimalString(p.loss, 1)}%` : "--"
+									const latStr = lat != null ? `${Math.round(lat)}` : "--"
+									const loss = getListLoss(p)
+									const lossStr = loss != null ? decimalString(loss, 1) : "--"
 									const level = getProbeLossLevel(p.loss, false, lat == null && p.loss == null)
 									return (
 										<div key={rt.id}>
-											<div>
-												<span className="font-semibold">{rt.label}</span>
-												<span>: </span>
-												<span
-													className={cn(
-														level === "critical"
-															? "text-red-500"
-															: level === "warning"
-																? "text-yellow-500"
-																: level === "muted"
-																	? "text-muted-foreground"
-																	: ""
-													)}
-												>
-													{latStr} / {lossStr}
-												</span>
-											</div>
-											{(p.target || p.n != null || p.ts != null) && (
-												<div className="text-muted-foreground text-[10px] ps-2">
-													{p.target && <div className="truncate max-w-[240px]">{p.target}</div>}
-													{p.n != null && (
-														<span>
-															{t`Samples`}: {p.n}
-														</span>
-													)}
-													{p.n != null && p.ts != null && <span> · </span>}
-													{p.ts != null && (
-														<span>
-															{t`Last updated`}: {new Date(p.ts * 1000).toLocaleTimeString()}
-														</span>
-													)}
-												</div>
-											)}
+											<span className="font-semibold">{rt.label}</span>
+											<span>: </span>
+											<span
+												className={cn(
+													level === "critical"
+														? "text-red-500"
+														: level === "warning"
+															? "text-yellow-500"
+															: level === "muted"
+																? "text-muted-foreground"
+																: ""
+												)}
+											>
+												{latStr}ms,{lossStr}%
+											</span>
 										</div>
 									)
 								})}

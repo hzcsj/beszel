@@ -17,7 +17,10 @@ export function LangToggle() {
 				<button
 					type="button"
 					className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
-					onClick={() => dynamicActivate(nextLocale)}
+					onClick={async () => {
+						await dynamicActivate(nextLocale)
+						window.location.reload()
+					}}
 				>
 					<LanguagesIcon className="absolute h-[1.2rem] w-[1.2rem] light:opacity-85" />
 					<span className="sr-only">

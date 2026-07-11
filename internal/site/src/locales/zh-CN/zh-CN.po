@@ -998,8 +998,8 @@ msgid "Language"
 msgstr "语言"
 
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Last updated"
-msgstr "最后更新"
+#~ msgid "Last updated"
+#~ msgstr "最后更新"
 
 #: src/components/routes/system/charts/probe-charts.tsx
 msgid "Latency"
@@ -1530,8 +1530,8 @@ msgid "S.M.A.R.T. Self-Test"
 msgstr "S.M.A.R.T. 自检"
 
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Samples"
-msgstr "采样数"
+#~ msgid "Samples"
+#~ msgstr "采样数"
 
 #: src/components/add-system.tsx
 msgid "Save {foo}"

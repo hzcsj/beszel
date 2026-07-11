@@ -33,6 +33,8 @@ export const shouldRedirectSettings = (route?: string) => route === "settings" &
 
 export const shouldInitializeAlertManager = () => getUserCapabilities().manageAlerts
 
+export const shouldShowProcessList = () => getUserCapabilities().viewSensitiveDetails
+
 export function runIfSensitiveDetailsAllowed(action: () => void): boolean {
 	if (!getUserCapabilities().viewSensitiveDetails) return false
 	action()

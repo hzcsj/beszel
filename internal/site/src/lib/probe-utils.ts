@@ -61,6 +61,11 @@ export function getListLatency(p: VPSProbeTargetStats): number | undefined {
 	return lat != null && lat > 0 ? lat : undefined
 }
 
+export function getListLoss(p: VPSProbeTargetStats): number | undefined {
+	if (p.local || !p.n || p.n <= 0) return undefined
+	return Math.min(Math.max(p.loss ?? 0, 0), 100)
+}
+
 export function getDetailLat(p: VPSProbeTargetStats | undefined): number | undefined {
 	if (!p || p.local) return undefined
 	return p.lat1 != null && p.lat1 > 0 ? p.lat1 : undefined
