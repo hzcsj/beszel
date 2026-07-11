@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/henrygd/beszel/internal/common"
 	"github.com/henrygd/beszel/internal/entities/system"
@@ -400,6 +401,23 @@ type SystemListSummary struct {
 	Info      system.Info `json:"info"`
 }
 
+const (
+	maxSummaryTargetLen   = 40
+	summaryTargetEllipsis = "…"
+)
+
+func truncateSummaryTarget(target string) string {
+	if len(target) <= maxSummaryTargetLen {
+		return target
+	}
+
+	end := maxSummaryTargetLen - len(summaryTargetEllipsis)
+	for end > 0 && !utf8.ValidString(target[:end]) {
+		end--
+	}
+	return target[:end] + summaryTargetEllipsis
+}
+
 func buildListSummary(systemID string, data *system.CombinedData) SystemListSummary {
 	info := data.Info
 	info.Hostname = ""
@@ -408,6 +426,7 @@ func buildListSummary(systemID string, data *system.CombinedData) SystemListSumm
 	info.Podman = false
 	info.Os = 0
 	info.Cores = 0
+	info.Bandwidth = 0
 	if info.VPSProbe != nil {
 		stripped := make(system.VPSProbeStats, len(info.VPSProbe))
 		for k, v := range info.VPSProbe {
@@ -417,9 +436,11 @@ func buildListSummary(systemID string, data *system.CombinedData) SystemListSumm
 				Success:            v.Success,
 				Samples:            v.Samples,
 				Updated:            v.Updated,
-				Target:             v.Target,
+				Target:             truncateSummaryTarget(v.Target),
 				LatencyAvgWindowMs: v.LatencyAvgWindowMs,
 				Local:              v.Local,
+				Label:              v.Label,
+				Position:           v.Position,
 			}
 		}
 		info.VPSProbe = stripped

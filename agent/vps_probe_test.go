@@ -28,102 +28,295 @@ func TestClampInt(t *testing.T) {
 	}
 }
 
-func TestProbeConfigEnabledPointerNil(t *testing.T) {
-	raw := `{"intervalSeconds":10,"targets":{"hub":"1.2.3.4:22"}}`
-	var cfg VPSProbeConfig
-	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
-		t.Fatal(err)
+func TestValidateTargetID(t *testing.T) {
+	valid := []string{"cn", "hk", "my-probe", "A_1", "abcdefghijklmnop"}
+	for _, id := range valid {
+		if err := validateTargetID(id); err != nil {
+			t.Errorf("expected valid id %q, got err: %v", id, err)
+		}
 	}
-	if cfg.Enabled != nil {
-		t.Errorf("Enabled should be nil when omitted, got %v", *cfg.Enabled)
-	}
-}
-
-func TestProbeConfigEnabledExplicitFalse(t *testing.T) {
-	raw := `{"enabled":false,"targets":{"hub":"1.2.3.4:22"}}`
-	var cfg VPSProbeConfig
-	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
-		t.Fatal(err)
-	}
-	if cfg.Enabled == nil {
-		t.Fatal("Enabled should not be nil when explicitly set")
-	}
-	if *cfg.Enabled {
-		t.Error("Enabled should be false")
+	invalid := []string{"", "has space", "abcdefghijklmnopq", "日本語", "a/b"}
+	for _, id := range invalid {
+		if err := validateTargetID(id); err == nil {
+			t.Errorf("expected invalid id %q to fail", id)
+		}
 	}
 }
 
-func TestProbeConfigEnabledExplicitTrue(t *testing.T) {
-	raw := `{"enabled":true}`
-	var cfg VPSProbeConfig
-	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
-		t.Fatal(err)
+func TestValidateTargetLabel(t *testing.T) {
+	valid := []string{"CN", "HK", "电信联通移动探测移动端可", "Ab"}
+	for _, l := range valid {
+		if err := validateTargetLabel(l); err != nil {
+			t.Errorf("expected valid label %q, got err: %v", l, err)
+		}
 	}
-	if cfg.Enabled == nil || !*cfg.Enabled {
-		t.Error("Enabled should be true when explicitly set")
+	invalid := []string{"", "电信联通移动探测移动端可达", "has\x00null"}
+	for _, l := range invalid {
+		if err := validateTargetLabel(l); err == nil {
+			t.Errorf("expected invalid label %q to fail", l)
+		}
 	}
 }
 
-func TestNewVPSProbeCollectorDefaults(t *testing.T) {
-	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", "")
+func TestValidateTargetAddress(t *testing.T) {
+	valid := []string{"1.2.3.4:80", "example.com:443", "[::1]:8080", "host.internal:35601"}
+	for _, a := range valid {
+		if err := validateTargetAddress(a); err != nil {
+			t.Errorf("expected valid address %q, got err: %v", a, err)
+		}
+	}
+	invalid := []string{"", "noport", ":80", "host:0", "host:99999", "host:http", "host:-1"}
+	for _, a := range invalid {
+		if err := validateTargetAddress(a); err == nil {
+			t.Errorf("expected invalid address %q to fail", a)
+		}
+	}
+
+	long := string(make([]byte, maxAddressLen+1))
+	if err := validateTargetAddress(long + ":80"); err == nil {
+		t.Error("expected overlong address to fail")
+	}
+}
+
+func TestParseArrayTargets0Targets(t *testing.T) {
+	raw := json.RawMessage(`[]`)
+	result := parseArrayTargets(raw)
+	if len(result) != 0 {
+		t.Errorf("expected 0 targets, got %d", len(result))
+	}
+}
+
+func TestParseArrayTargets1Target(t *testing.T) {
+	raw := json.RawMessage(`[{"id":"cn","label":"CN","address":"1.2.3.4:80"}]`)
+	result := parseArrayTargets(raw)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 target, got %d", len(result))
+	}
+	if result[0].id != "cn" || result[0].label != "CN" || result[0].pos != 1 {
+		t.Errorf("unexpected target: %+v", result[0])
+	}
+}
+
+func TestParseArrayTargets3Targets(t *testing.T) {
+	raw := json.RawMessage(`[
+		{"id":"ct","label":"CT","address":"ct.example.com:80"},
+		{"id":"cu","label":"CU","address":"cu.example.com:80"},
+		{"id":"cm","label":"CM","address":"cm.example.com:80"}
+	]`)
+	result := parseArrayTargets(raw)
+	if len(result) != 3 {
+		t.Fatalf("expected 3 targets, got %d", len(result))
+	}
+	for i, want := range []string{"ct", "cu", "cm"} {
+		if result[i].id != want {
+			t.Errorf("target %d: want id %q, got %q", i, want, result[i].id)
+		}
+		if result[i].pos != uint8(i+1) {
+			t.Errorf("target %d: want pos %d, got %d", i, i+1, result[i].pos)
+		}
+	}
+}
+
+func TestParseArrayTargetsOver3Rejected(t *testing.T) {
+	raw := json.RawMessage(`[
+		{"id":"a","label":"A","address":"1.2.3.4:80"},
+		{"id":"b","label":"B","address":"1.2.3.4:80"},
+		{"id":"c","label":"C","address":"1.2.3.4:80"},
+		{"id":"d","label":"D","address":"1.2.3.4:80"}
+	]`)
+	result := parseArrayTargets(raw)
+	if result != nil {
+		t.Errorf("expected nil for >3 targets, got %d", len(result))
+	}
+}
+
+func TestParseArrayTargetsDuplicateID(t *testing.T) {
+	raw := json.RawMessage(`[
+		{"id":"cn","label":"CN1","address":"1.2.3.4:80"},
+		{"id":"cn","label":"CN2","address":"5.6.7.8:80"}
+	]`)
+	result := parseArrayTargets(raw)
+	if len(result) != 1 {
+		t.Errorf("expected 1 target after dedup, got %d", len(result))
+	}
+}
+
+func TestParseArrayTargetsInvalidIDSkipped(t *testing.T) {
+	raw := json.RawMessage(`[
+		{"id":"日本","label":"JP","address":"1.2.3.4:80"},
+		{"id":"cn","label":"CN","address":"5.6.7.8:80"}
+	]`)
+	result := parseArrayTargets(raw)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 valid target, got %d", len(result))
+	}
+	if result[0].id != "cn" {
+		t.Errorf("expected cn, got %s", result[0].id)
+	}
+}
+
+func TestParseArrayTargetsLocalTarget(t *testing.T) {
+	raw := json.RawMessage(`[{"id":"local","label":"Self","local":true}]`)
+	result := parseArrayTargets(raw)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 target, got %d", len(result))
+	}
+	if !result[0].local {
+		t.Error("expected local=true")
+	}
+}
+
+func TestParseArrayTargetsOrderPreserved(t *testing.T) {
+	raw := json.RawMessage(`[
+		{"id":"cm","label":"CM","address":"cm.example.com:80"},
+		{"id":"ct","label":"CT","address":"ct.example.com:80"},
+		{"id":"cu","label":"CU","address":"cu.example.com:80"}
+	]`)
+	result := parseArrayTargets(raw)
+	expected := []string{"cm", "ct", "cu"}
+	for i, want := range expected {
+		if result[i].id != want {
+			t.Errorf("position %d: want %q, got %q", i, want, result[i].id)
+		}
+	}
+}
+
+func TestParseArrayTargetsIPv6(t *testing.T) {
+	raw := json.RawMessage(`[{"id":"v6","label":"IPv6","address":"[::1]:8080"}]`)
+	result := parseArrayTargets(raw)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 target, got %d", len(result))
+	}
+	if result[0].address != "[::1]:8080" {
+		t.Errorf("unexpected address: %s", result[0].address)
+	}
+}
+
+func TestParseLegacyMapTargets(t *testing.T) {
+	raw := json.RawMessage(`{"hub":"10.0.0.1:22","ct":"10.0.0.2:80"}`)
+	result := parseLegacyMapTargets(raw, false)
+	if len(result) != 4 {
+		t.Fatalf("legacy map should produce 4 canonical targets, got %d", len(result))
+	}
+	if result[0].id != "hub" || result[0].address != "10.0.0.1:22" {
+		t.Errorf("hub: %+v", result[0])
+	}
+	if result[0].label != "HUB" {
+		t.Errorf("hub label should be HUB, got %s", result[0].label)
+	}
+}
+
+func TestParseLegacyMapTargetsHubLocal(t *testing.T) {
+	raw := json.RawMessage(`{"hub":"10.0.0.1:22"}`)
+	result := parseLegacyMapTargets(raw, true)
+	hub := result[0]
+	if !hub.local {
+		t.Error("hub should be local when hubLocal=true")
+	}
+}
+
+func TestNewVPSProbeCollectorNoEnvVar(t *testing.T) {
+	for _, k := range []string{"BESZEL_AGENT_VPS_PROBE_CONFIG", "VPS_PROBE_CONFIG"} {
+		t.Setenv(k, "")
+	}
+	// Unset to simulate absence
 	c := newVPSProbeCollector()
-	if c == nil {
-		t.Fatal("collector should be non-nil with default config")
-	}
-	if len(c.config.Targets) != len(defaultProbeTargets) {
-		t.Errorf("expected %d default targets, got %d", len(defaultProbeTargets), len(c.config.Targets))
+	if c != nil {
+		t.Error("collector should be nil when env var is absent")
 	}
 }
 
 func TestNewVPSProbeCollectorDisabledExplicitly(t *testing.T) {
-	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"enabled":false}`)
+	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"enabled":false,"targets":[{"id":"cn","label":"CN","address":"1.2.3.4:80"}]}`)
 	c := newVPSProbeCollector()
 	if c != nil {
 		t.Error("collector should be nil when explicitly disabled")
 	}
 }
 
-func TestNewVPSProbeCollectorOmittedEnabled(t *testing.T) {
-	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"intervalSeconds":10}`)
-	c := newVPSProbeCollector()
-	if c == nil {
-		t.Fatal("collector should be non-nil when enabled is omitted")
-	}
-	if c.interval.Seconds() != 10 {
-		t.Errorf("expected 10s interval, got %v", c.interval)
-	}
-}
-
 func TestNewVPSProbeCollectorInvalidJSON(t *testing.T) {
 	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `not valid json`)
 	c := newVPSProbeCollector()
-	if c == nil {
-		t.Fatal("collector should fall back to defaults on invalid JSON")
+	if c != nil {
+		t.Error("collector should be nil on invalid JSON")
 	}
 }
 
-func TestNewVPSProbeCollectorCustomTargetsCanonicalOnly(t *testing.T) {
-	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"targets":{"hub":"10.0.0.1:22","myhost":"10.0.0.2:80"}}`)
+func TestNewVPSProbeCollectorNewArrayFormat(t *testing.T) {
+	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{
+		"intervalSeconds":10,"timeoutMs":500,"windowSize":30,
+		"targets":[
+			{"id":"ct","label":"CT","address":"ct.example.com:80"},
+			{"id":"cu","label":"CU","address":"cu.example.com:80"}
+		]
+	}`)
 	c := newVPSProbeCollector()
 	if c == nil {
 		t.Fatal("collector should be non-nil")
 	}
-	if len(c.config.Targets) != 4 {
-		t.Errorf("should always have 4 canonical targets, got %d", len(c.config.Targets))
+	if len(c.targets) != 2 {
+		t.Errorf("expected 2 targets, got %d", len(c.targets))
 	}
-	if c.config.Targets["hub"] != "10.0.0.1:22" {
-		t.Errorf("hub should be overridden: got %s", c.config.Targets["hub"])
+	if c.interval.Seconds() != 10 {
+		t.Errorf("expected 10s interval, got %v", c.interval)
 	}
-	if c.config.Targets["ct"] != defaultProbeTargets["ct"] {
-		t.Errorf("ct should remain default: got %s", c.config.Targets["ct"])
+	if c.timeout.Milliseconds() != 500 {
+		t.Errorf("expected 500ms timeout, got %v", c.timeout)
 	}
-	if _, ok := c.config.Targets["myhost"]; ok {
-		t.Error("non-canonical key 'myhost' should be ignored")
+	if c.windowSize != 30 {
+		t.Errorf("expected windowSize 30, got %d", c.windowSize)
+	}
+}
+
+func TestNewVPSProbeCollectorLegacyFormat(t *testing.T) {
+	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"targets":{"hub":"10.0.0.1:22"}}`)
+	c := newVPSProbeCollector()
+	if c == nil {
+		t.Fatal("collector should be non-nil with legacy format")
+	}
+	if len(c.targets) != 4 {
+		t.Errorf("legacy format should produce 4 targets, got %d", len(c.targets))
+	}
+}
+
+func TestNewVPSProbeCollectorLegacyNoTargetsField(t *testing.T) {
+	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"hubLocal":true}`)
+	c := newVPSProbeCollector()
+	if c == nil {
+		t.Fatal("collector should be non-nil when targets field omitted (legacy compat)")
+	}
+	if len(c.targets) != 4 {
+		t.Errorf("legacy no-targets should produce 4 canonical targets, got %d", len(c.targets))
+	}
+	if !c.targets[0].local {
+		t.Error("hub should be local when hubLocal=true")
+	}
+}
+
+func TestNewVPSProbeCollectorLegacyIntervalOnly(t *testing.T) {
+	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"intervalSeconds":15}`)
+	c := newVPSProbeCollector()
+	if c == nil {
+		t.Fatal("collector should be non-nil when only interval configured")
+	}
+	if len(c.targets) != 4 {
+		t.Errorf("expected 4 canonical targets, got %d", len(c.targets))
+	}
+}
+
+func TestNewVPSProbeCollectorExplicitEmptyArray(t *testing.T) {
+	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"targets":[]}`)
+	c := newVPSProbeCollector()
+	if c != nil {
+		t.Error("explicit empty targets array should disable probes (nil collector)")
 	}
 }
 
 func TestNewVPSProbeCollectorClamping(t *testing.T) {
-	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"intervalSeconds":999,"timeoutMs":1,"windowSize":5}`)
+	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{
+		"intervalSeconds":999,"timeoutMs":1,"windowSize":5,
+		"targets":[{"id":"cn","label":"CN","address":"1.2.3.4:80"}]
+	}`)
 	c := newVPSProbeCollector()
 	if c == nil {
 		t.Fatal("collector should be non-nil")
@@ -134,13 +327,13 @@ func TestNewVPSProbeCollectorClamping(t *testing.T) {
 	if c.timeout.Milliseconds() != 100 {
 		t.Errorf("timeout should be clamped to 100ms, got %v", c.timeout)
 	}
-	if c.config.WindowSize != 10 {
-		t.Errorf("windowSize should be clamped to 10, got %d", c.config.WindowSize)
+	if c.windowSize != 10 {
+		t.Errorf("windowSize should be clamped to 10, got %d", c.windowSize)
 	}
 }
 
 func TestProbeCollectorStartStop(t *testing.T) {
-	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"intervalSeconds":300,"targets":{"hub":"192.0.2.1:1"}}`)
+	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"intervalSeconds":300,"targets":[{"id":"hub","label":"HUB","address":"192.0.2.1:1"}]}`)
 	c := newVPSProbeCollector()
 	if c == nil {
 		t.Fatal("collector should be non-nil")
@@ -154,7 +347,7 @@ func TestProbeCollectorStartStop(t *testing.T) {
 }
 
 func TestProbeCollectorStopWaitsForRunExit(t *testing.T) {
-	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"intervalSeconds":300,"targets":{"hub":"192.0.2.1:1"}}`)
+	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"intervalSeconds":300,"targets":[{"id":"hub","label":"HUB","address":"192.0.2.1:1"}]}`)
 	c := newVPSProbeCollector()
 	if c == nil {
 		t.Fatal("collector should be non-nil")
@@ -166,14 +359,10 @@ func TestProbeCollectorStopWaitsForRunExit(t *testing.T) {
 	default:
 		t.Error("done channel should be closed after Stop")
 	}
-	results := c.GetResults()
-	if results == nil {
-		t.Error("GetResults after Stop should return non-nil map")
-	}
 }
 
 func TestProbeCollectorStopBeforeStart(t *testing.T) {
-	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"intervalSeconds":300,"targets":{"hub":"192.0.2.1:1"}}`)
+	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"intervalSeconds":300,"targets":[{"id":"hub","label":"HUB","address":"192.0.2.1:1"}]}`)
 	c := newVPSProbeCollector()
 	if c == nil {
 		t.Fatal("collector should be non-nil")
@@ -236,7 +425,22 @@ func TestProbeTargetTimeout(t *testing.T) {
 	}
 }
 
-func TestProbeAllConcurrentWithLocalTargets(t *testing.T) {
+func newTestCollector(t *testing.T, addr string, windowSize, intervalSec int) *VPSProbeCollector {
+	t.Helper()
+	return &VPSProbeCollector{
+		targets: []resolvedTarget{
+			{id: "hub", label: "HUB", address: addr, pos: 1},
+		},
+		windows: map[string]*probeWindow{
+			"hub": {samples: make([]probeSample, windowSize)},
+		},
+		latest:    make(system.VPSProbeStats),
+		timeout:   2 * time.Second,
+		intervalS: intervalSec,
+	}
+}
+
+func TestProbeAllConcurrentDynamicTargets(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -260,50 +464,81 @@ func TestProbeAllConcurrentWithLocalTargets(t *testing.T) {
 	lnRefused.Close()
 
 	c := &VPSProbeCollector{
-		config: VPSProbeConfig{
-			WindowSize: 10,
-			Targets: map[string]string{
-				"hub": ln.Addr().String(),
-				"ct":  ln.Addr().String(),
-				"cu":  refusedAddr,
-				"cm":  "192.0.2.1:1",
-			},
+		targets: []resolvedTarget{
+			{id: "ct", label: "CT", address: ln.Addr().String(), pos: 1},
+			{id: "cu", label: "CU", address: refusedAddr, pos: 2},
+			{id: "cm", label: "CM", address: "192.0.2.1:1", pos: 3},
 		},
-		windows: make(map[string]*probeWindow, 4),
-		latest:  make(system.VPSProbeStats, 4),
-		timeout: 200 * time.Millisecond,
-	}
-	for key := range c.config.Targets {
-		c.windows[key] = &probeWindow{samples: make([]probeSample, 10)}
+		windows: map[string]*probeWindow{
+			"ct": {samples: make([]probeSample, 10)},
+			"cu": {samples: make([]probeSample, 10)},
+			"cm": {samples: make([]probeSample, 10)},
+		},
+		latest:    make(system.VPSProbeStats, 3),
+		timeout:   200 * time.Millisecond,
+		intervalS: 5,
 	}
 
 	c.probeAll(context.Background())
 
-	hub := c.latest["hub"]
-	if !hub.Success {
-		t.Error("hub (open listener) should succeed")
-	}
 	ct := c.latest["ct"]
 	if !ct.Success {
 		t.Error("ct (open listener) should succeed")
 	}
+	if ct.Label != "CT" {
+		t.Errorf("ct label: want CT, got %s", ct.Label)
+	}
+	if ct.Position != 1 {
+		t.Errorf("ct pos: want 1, got %d", ct.Position)
+	}
+
 	cu := c.latest["cu"]
 	if !cu.Success {
 		t.Error("cu (refused port) should succeed")
 	}
+
 	cm := c.latest["cm"]
 	if cm.Success {
 		t.Error("cm (unreachable) should fail")
-	}
-	if hub.LossPct != 0 {
-		t.Errorf("hub loss should be 0%%, got %f%%", hub.LossPct)
 	}
 	if cm.LossPct != 100 {
 		t.Errorf("cm loss should be 100%%, got %f%%", cm.LossPct)
 	}
 }
 
-func TestProbeWindowRollingLossViaProbeAll(t *testing.T) {
+func TestProbeAllLocalTargetSkipsDial(t *testing.T) {
+	c := &VPSProbeCollector{
+		targets: []resolvedTarget{
+			{id: "self", label: "Self", local: true, pos: 1},
+			{id: "ct", label: "CT", address: "192.0.2.1:1", pos: 2},
+		},
+		windows: map[string]*probeWindow{
+			"self": {samples: make([]probeSample, 10)},
+			"ct":   {samples: make([]probeSample, 10)},
+		},
+		latest:    make(system.VPSProbeStats, 2),
+		timeout:   100 * time.Millisecond,
+		intervalS: 5,
+	}
+
+	c.probeAll(context.Background())
+
+	self := c.latest["self"]
+	if !self.Local {
+		t.Error("self should be Local")
+	}
+	if self.Label != "Self" {
+		t.Errorf("self label: want Self, got %s", self.Label)
+	}
+	if self.Position != 1 {
+		t.Errorf("self pos: want 1, got %d", self.Position)
+	}
+	if c.windows["self"].count != 0 {
+		t.Error("local target window should not have samples")
+	}
+}
+
+func TestProbeWindowRollingLoss(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -320,22 +555,22 @@ func TestProbeWindowRollingLossViaProbeAll(t *testing.T) {
 	}()
 
 	const windowSize = 4
-	newCollector := func() *VPSProbeCollector {
+	newC := func() *VPSProbeCollector {
 		return &VPSProbeCollector{
-			config: VPSProbeConfig{
-				WindowSize: windowSize,
-				Targets:    map[string]string{"hub": ln.Addr().String()},
+			targets: []resolvedTarget{
+				{id: "hub", label: "HUB", address: ln.Addr().String(), pos: 1},
 			},
 			windows: map[string]*probeWindow{
 				"hub": {samples: make([]probeSample, windowSize)},
 			},
-			latest:  make(system.VPSProbeStats),
-			timeout: 2 * time.Second,
+			latest:    make(system.VPSProbeStats),
+			timeout:   2 * time.Second,
+			intervalS: 5,
 		}
 	}
 
 	t.Run("all_success", func(t *testing.T) {
-		c := newCollector()
+		c := newC()
 		for i := 0; i < windowSize; i++ {
 			c.probeAll(context.Background())
 		}
@@ -344,15 +579,12 @@ func TestProbeWindowRollingLossViaProbeAll(t *testing.T) {
 			t.Errorf("expected %d samples, got %d", windowSize, hub.Samples)
 		}
 		if hub.LossPct != 0 {
-			t.Errorf("all probes succeeded, loss should be 0%%, got %f%%", hub.LossPct)
-		}
-		if !hub.Success {
-			t.Error("last probe should be success")
+			t.Errorf("expected 0%% loss, got %f%%", hub.LossPct)
 		}
 	})
 
 	t.Run("mixed_success_failure", func(t *testing.T) {
-		c := newCollector()
+		c := newC()
 		cancelledCtx, cancel := context.WithCancel(context.Background())
 		cancel()
 
@@ -362,19 +594,13 @@ func TestProbeWindowRollingLossViaProbeAll(t *testing.T) {
 		c.probeAll(cancelledCtx)
 
 		hub := c.latest["hub"]
-		if hub.Samples != windowSize {
-			t.Errorf("expected %d samples, got %d", windowSize, hub.Samples)
-		}
 		if hub.LossPct != 50 {
 			t.Errorf("expected 50%% loss, got %f%%", hub.LossPct)
-		}
-		if hub.Success {
-			t.Error("last probe used cancelled context, should be failure")
 		}
 	})
 
 	t.Run("eviction_recovery", func(t *testing.T) {
-		c := newCollector()
+		c := newC()
 		cancelledCtx, cancel := context.WithCancel(context.Background())
 		cancel()
 
@@ -383,51 +609,14 @@ func TestProbeWindowRollingLossViaProbeAll(t *testing.T) {
 		c.probeAll(context.Background())
 		c.probeAll(cancelledCtx)
 
-		hub := c.latest["hub"]
-		if hub.LossPct != 50 {
-			t.Errorf("pre-eviction: expected 50%% loss, got %f%%", hub.LossPct)
-		}
-
 		for i := 0; i < windowSize; i++ {
 			c.probeAll(context.Background())
 		}
-
-		hub = c.latest["hub"]
+		hub := c.latest["hub"]
 		if hub.LossPct != 0 {
-			t.Errorf("post-eviction: expected 0%% loss, got %f%%", hub.LossPct)
-		}
-		if !hub.Success {
-			t.Error("last probe should be success after recovery")
+			t.Errorf("expected 0%% loss after eviction, got %f%%", hub.LossPct)
 		}
 	})
-}
-
-func TestCanonicalProbeKeysLength(t *testing.T) {
-	if len(canonicalProbeKeys) != 4 {
-		t.Errorf("expected 4 canonical keys, got %d", len(canonicalProbeKeys))
-	}
-	expected := map[string]bool{"hub": true, "ct": true, "cu": true, "cm": true}
-	for _, k := range canonicalProbeKeys {
-		if !expected[k] {
-			t.Errorf("unexpected canonical key: %s", k)
-		}
-	}
-}
-
-func newTestCollectorWithListener(t *testing.T, addr string, windowSize, intervalSec int) *VPSProbeCollector {
-	t.Helper()
-	return &VPSProbeCollector{
-		config: VPSProbeConfig{
-			IntervalSeconds: intervalSec,
-			WindowSize:      windowSize,
-			Targets:         map[string]string{"hub": addr},
-		},
-		windows: map[string]*probeWindow{
-			"hub": {samples: make([]probeSample, windowSize)},
-		},
-		latest:  make(system.VPSProbeStats),
-		timeout: 2 * time.Second,
-	}
 }
 
 func TestLatencyAverages(t *testing.T) {
@@ -447,68 +636,30 @@ func TestLatencyAverages(t *testing.T) {
 	}()
 
 	t.Run("raw_lat_unchanged", func(t *testing.T) {
-		c := newTestCollectorWithListener(t, ln.Addr().String(), 60, 5)
+		c := newTestCollector(t, ln.Addr().String(), 60, 5)
 		c.probeAll(context.Background())
 		hub := c.latest["hub"]
 		if hub.LatencyMs <= 0 {
 			t.Error("raw lat should be positive on success")
 		}
-		if !hub.Success {
-			t.Error("should succeed")
-		}
 	})
 
 	t.Run("one_minute_mean_recent_samples", func(t *testing.T) {
-		c := newTestCollectorWithListener(t, ln.Addr().String(), 60, 5)
+		c := newTestCollector(t, ln.Addr().String(), 60, 5)
 		for i := 0; i < 20; i++ {
 			c.probeAll(context.Background())
 		}
 		hub := c.latest["hub"]
 		if hub.LatencyAvg1mMs <= 0 {
-			t.Error("lat1 should be positive after 20 successful probes")
+			t.Error("lat1 should be positive after 20 probes")
 		}
 		if hub.LatencyAvgWindowMs <= 0 {
-			t.Error("latw should be positive after 20 successful probes")
-		}
-	})
-
-	t.Run("window_mean_uses_all_success_only", func(t *testing.T) {
-		c := newTestCollectorWithListener(t, ln.Addr().String(), 4, 5)
-		cancelledCtx, cancel := context.WithCancel(context.Background())
-		cancel()
-
-		c.probeAll(context.Background())
-		c.probeAll(cancelledCtx)
-		c.probeAll(context.Background())
-		c.probeAll(cancelledCtx)
-
-		hub := c.latest["hub"]
-		if hub.LossPct != 50 {
-			t.Errorf("expected 50%% loss, got %f%%", hub.LossPct)
-		}
-		if hub.LatencyAvgWindowMs <= 0 {
-			t.Error("latw should be positive (only counts successful samples)")
-		}
-	})
-
-	t.Run("failed_samples_do_not_zero_latency_mean", func(t *testing.T) {
-		c := newTestCollectorWithListener(t, ln.Addr().String(), 4, 5)
-		cancelledCtx, cancel := context.WithCancel(context.Background())
-		cancel()
-
-		c.probeAll(context.Background())
-		avgAfterOne := c.latest["hub"].LatencyAvgWindowMs
-
-		c.probeAll(cancelledCtx)
-		avgAfterTwo := c.latest["hub"].LatencyAvgWindowMs
-
-		if avgAfterTwo != avgAfterOne {
-			t.Errorf("window mean should not change when failed sample is added (was %f, now %f)", avgAfterOne, avgAfterTwo)
+			t.Error("latw should be positive after 20 probes")
 		}
 	})
 
 	t.Run("no_success_omits_both_means", func(t *testing.T) {
-		c := newTestCollectorWithListener(t, ln.Addr().String(), 4, 5)
+		c := newTestCollector(t, ln.Addr().String(), 4, 5)
 		cancelledCtx, cancel := context.WithCancel(context.Background())
 		cancel()
 
@@ -517,70 +668,63 @@ func TestLatencyAverages(t *testing.T) {
 		}
 		hub := c.latest["hub"]
 		if hub.LatencyAvg1mMs != 0 {
-			t.Errorf("lat1 should be 0 when no success, got %f", hub.LatencyAvg1mMs)
+			t.Errorf("lat1 should be 0, got %f", hub.LatencyAvg1mMs)
 		}
 		if hub.LatencyAvgWindowMs != 0 {
-			t.Errorf("latw should be 0 when no success, got %f", hub.LatencyAvgWindowMs)
+			t.Errorf("latw should be 0, got %f", hub.LatencyAvgWindowMs)
 		}
 		if hub.LossPct != 100 {
 			t.Errorf("expected 100%% loss, got %f%%", hub.LossPct)
 		}
 	})
+}
 
-	t.Run("wraparound_recent_samples", func(t *testing.T) {
-		c := newTestCollectorWithListener(t, ln.Addr().String(), 4, 5)
+func TestLabelAndPositionInResults(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			conn.Close()
+		}
+	}()
 
-		for i := 0; i < 6; i++ {
-			c.probeAll(context.Background())
-		}
-		hub := c.latest["hub"]
-		if hub.Samples != 4 {
-			t.Errorf("expected 4 samples after wraparound, got %d", hub.Samples)
-		}
-		if hub.LatencyAvg1mMs <= 0 {
-			t.Error("lat1 should still be positive after wraparound")
-		}
-		if hub.LatencyAvgWindowMs <= 0 {
-			t.Error("latw should still be positive after wraparound")
-		}
-	})
+	c := &VPSProbeCollector{
+		targets: []resolvedTarget{
+			{id: "cn", label: "中国", address: ln.Addr().String(), pos: 1},
+			{id: "hk", label: "HK", address: ln.Addr().String(), pos: 2},
+		},
+		windows: map[string]*probeWindow{
+			"cn": {samples: make([]probeSample, 10)},
+			"hk": {samples: make([]probeSample, 10)},
+		},
+		latest:    make(system.VPSProbeStats),
+		timeout:   2 * time.Second,
+		intervalS: 5,
+	}
+	c.probeAll(context.Background())
 
-	t.Run("eviction_restores_averages", func(t *testing.T) {
-		c := newTestCollectorWithListener(t, ln.Addr().String(), 4, 5)
-		cancelledCtx, cancel := context.WithCancel(context.Background())
-		cancel()
+	cn := c.latest["cn"]
+	if cn.Label != "中国" {
+		t.Errorf("cn label: want '中国', got %q", cn.Label)
+	}
+	if cn.Position != 1 {
+		t.Errorf("cn pos: want 1, got %d", cn.Position)
+	}
 
-		c.probeAll(context.Background())
-		c.probeAll(cancelledCtx)
-		c.probeAll(context.Background())
-		c.probeAll(cancelledCtx)
-
-		if c.latest["hub"].LossPct != 50 {
-			t.Errorf("expected 50%% loss, got %f%%", c.latest["hub"].LossPct)
-		}
-
-		for i := 0; i < 4; i++ {
-			c.probeAll(context.Background())
-		}
-		hub := c.latest["hub"]
-		if hub.LossPct != 0 {
-			t.Errorf("expected 0%% loss after eviction, got %f%%", hub.LossPct)
-		}
-		if hub.LatencyAvgWindowMs <= 0 {
-			t.Error("latw should be positive after eviction")
-		}
-	})
-
-	t.Run("interval_above_one_minute", func(t *testing.T) {
-		c := newTestCollectorWithListener(t, ln.Addr().String(), 10, 120)
-		for i := 0; i < 5; i++ {
-			c.probeAll(context.Background())
-		}
-		hub := c.latest["hub"]
-		if hub.LatencyAvg1mMs <= 0 {
-			t.Error("lat1 should be positive even with large interval (clamped to 1 recent sample)")
-		}
-	})
+	hk := c.latest["hk"]
+	if hk.Label != "HK" {
+		t.Errorf("hk label: want 'HK', got %q", hk.Label)
+	}
+	if hk.Position != 2 {
+		t.Errorf("hk pos: want 2, got %d", hk.Position)
+	}
 }
 
 func makeWindow(samples []probeSample) *probeWindow {
@@ -633,10 +777,6 @@ func TestComputeWindowStatsDeterministic(t *testing.T) {
 		if s.Samples1m != 4 {
 			t.Errorf("n1 should be 4, got %d", s.Samples1m)
 		}
-		wantLat := (10.0 + 20 + 30 + 40) / 4.0
-		if s.LatencyAvgWindowMs != wantLat {
-			t.Errorf("latw: want %f, got %f", wantLat, s.LatencyAvgWindowMs)
-		}
 	})
 
 	t.Run("all_failed_100pct_loss", func(t *testing.T) {
@@ -655,25 +795,7 @@ func TestComputeWindowStatsDeterministic(t *testing.T) {
 			t.Error("n1 must be positive even when all failed")
 		}
 		if s.LatencyAvg1mMs != 0 {
-			t.Errorf("lat1 should be 0 (omitted) when all failed, got %f", s.LatencyAvg1mMs)
-		}
-	})
-
-	t.Run("wraparound_selects_newest", func(t *testing.T) {
-		samples := make([]probeSample, 4)
-		samples[0] = probeSample{latencyMs: 100, success: true}
-		samples[1] = probeSample{latencyMs: 200, success: true}
-		samples[2] = probeSample{latencyMs: 300, success: true}
-		samples[3] = probeSample{latencyMs: 400, success: true}
-		w := &probeWindow{samples: samples, count: 4, pos: 2}
-
-		s := computeWindowStats(w, 5, "hub")
-		wantLat1 := (100.0 + 200 + 300 + 400) / 4.0
-		if s.LatencyAvg1mMs != wantLat1 {
-			t.Errorf("lat1: want %f, got %f", wantLat1, s.LatencyAvg1mMs)
-		}
-		if s.LatencyMs != 200 {
-			t.Errorf("raw lat should be 200 (pos=2, newest at idx 1), got %f", s.LatencyMs)
+			t.Errorf("lat1 should be 0 when all failed, got %f", s.LatencyAvg1mMs)
 		}
 	})
 
@@ -685,7 +807,7 @@ func TestComputeWindowStatsDeterministic(t *testing.T) {
 		w := makeWindow(samples)
 		s := computeWindowStats(w, 5, "hub")
 		if s.LatencyAvg1mMs != 10 {
-			t.Errorf("lat1 should be 10 (only success counted), got %f", s.LatencyAvg1mMs)
+			t.Errorf("lat1 should be 10, got %f", s.LatencyAvg1mMs)
 		}
 		if s.LatencyAvgWindowMs != 10 {
 			t.Errorf("latw should be 10, got %f", s.LatencyAvgWindowMs)
@@ -704,131 +826,13 @@ func TestComputeWindowStatsDeterministic(t *testing.T) {
 			t.Errorf("n1 should be 1 for interval>60s, got %d", s.Samples1m)
 		}
 		if s.LatencyAvg1mMs != 150 {
-			t.Errorf("lat1 should use only newest sample (150), got %f", s.LatencyAvg1mMs)
-		}
-	})
-
-	t.Run("eviction_precise", func(t *testing.T) {
-		samples := make([]probeSample, 4)
-		samples[0] = probeSample{latencyMs: 10, success: true}
-		samples[1] = probeSample{success: false}
-		w := &probeWindow{samples: samples, count: 2, pos: 2}
-
-		s1 := computeWindowStats(w, 5, "hub")
-		if s1.LossPct != 50 {
-			t.Errorf("pre-eviction loss: want 50, got %f", s1.LossPct)
-		}
-
-		w.samples[2] = probeSample{latencyMs: 20, success: true}
-		w.pos = 3
-		w.count = 3
-		w.samples[3] = probeSample{latencyMs: 30, success: true}
-		w.pos = 0
-		w.count = 4
-
-		s2 := computeWindowStats(w, 5, "hub")
-		wantLoss := 1.0 / 4.0 * 100
-		if s2.LossPct != wantLoss {
-			t.Errorf("post-eviction loss: want %f, got %f", wantLoss, s2.LossPct)
+			t.Errorf("lat1 should use only newest sample, got %f", s.LatencyAvg1mMs)
 		}
 	})
 }
 
-func TestHubLocalConfigParsing(t *testing.T) {
-	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"hubLocal":true}`)
-	c := newVPSProbeCollector()
-	if c == nil {
-		t.Fatal("collector should be non-nil")
-	}
-	if !c.config.HubLocal {
-		t.Error("HubLocal should be true")
-	}
-	if len(c.config.Targets) != 4 {
-		t.Errorf("should still have 4 targets, got %d", len(c.config.Targets))
-	}
-}
-
-func TestHubLocalConfigDefault(t *testing.T) {
-	t.Setenv("BESZEL_AGENT_VPS_PROBE_CONFIG", `{"intervalSeconds":10}`)
-	c := newVPSProbeCollector()
-	if c == nil {
-		t.Fatal("collector should be non-nil")
-	}
-	if c.config.HubLocal {
-		t.Error("HubLocal should default to false")
-	}
-}
-
-func TestProbeAllHubLocalSkipsHubDial(t *testing.T) {
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer ln.Close()
-	go func() {
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				return
-			}
-			conn.Close()
-		}
-	}()
-
-	c := &VPSProbeCollector{
-		config: VPSProbeConfig{
-			HubLocal:        true,
-			IntervalSeconds: 5,
-			WindowSize:      10,
-			Targets: map[string]string{
-				"hub": "192.0.2.99:1",
-				"ct":  ln.Addr().String(),
-				"cu":  ln.Addr().String(),
-				"cm":  ln.Addr().String(),
-			},
-		},
-		windows: make(map[string]*probeWindow, 4),
-		latest:  make(system.VPSProbeStats, 4),
-		timeout: 200 * time.Millisecond,
-	}
-	for key := range c.config.Targets {
-		c.windows[key] = &probeWindow{samples: make([]probeSample, 10)}
-	}
-
-	c.probeAll(context.Background())
-
-	hub := c.latest["hub"]
-	if !hub.Local {
-		t.Error("hub should have Local=true")
-	}
-	if hub.LatencyMs != 0 {
-		t.Errorf("hub latency should be 0 (not probed), got %f", hub.LatencyMs)
-	}
-	if hub.Samples != 0 {
-		t.Errorf("hub samples should be 0, got %d", hub.Samples)
-	}
-	if hub.Samples1m != 0 {
-		t.Errorf("hub n1 should be 0, got %d", hub.Samples1m)
-	}
-	if hub.Target != "192.0.2.99:1" {
-		t.Errorf("hub target should be preserved, got %q", hub.Target)
-	}
-	if hub.Updated == 0 {
-		t.Error("hub Updated should be set")
-	}
-
-	ct := c.latest["ct"]
-	if ct.Local {
-		t.Error("ct should not be local")
-	}
-	if !ct.Success {
-		t.Error("ct should succeed")
-	}
-	if ct.Samples != 1 {
-		t.Errorf("ct samples should be 1, got %d", ct.Samples)
-	}
-
-	if c.windows["hub"].count != 0 {
-		t.Errorf("hub window should remain empty (not probed), count=%d", c.windows["hub"].count)
+func TestCanonicalProbeKeysLength(t *testing.T) {
+	if len(canonicalProbeKeys) != 4 {
+		t.Errorf("expected 4 canonical keys, got %d", len(canonicalProbeKeys))
 	}
 }

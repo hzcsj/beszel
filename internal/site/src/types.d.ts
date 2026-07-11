@@ -30,6 +30,7 @@ export interface VPSTrafficSettings {
 }
 
 export interface VPSSystemSettings {
+	order?: number
 	traffic?: VPSTrafficSettings
 }
 
@@ -120,6 +121,10 @@ export interface VPSProbeTargetStats {
 	n1?: number
 	/** hub is on the same node as the agent */
 	local?: boolean
+	/** user-facing display label */
+	label?: string
+	/** 1-based position from configured target order */
+	pos?: number
 }
 
 export interface VPSTrafficInfo {

@@ -188,9 +188,11 @@ type VPSProbeTargetStats struct {
 	LossPct1m          float64 `json:"loss1,omitempty" cbor:"8,keyasint,omitempty"`
 	Samples1m          uint16  `json:"n1,omitempty" cbor:"9,keyasint,omitempty"`
 	Local              bool    `json:"local,omitempty" cbor:"10,keyasint,omitempty"`
+	Label              string  `json:"label,omitempty" cbor:"11,keyasint,omitempty"`
+	Position           uint8   `json:"pos,omitempty" cbor:"12,keyasint,omitempty"`
 }
 
-// VPSProbeStats holds probe results keyed by canonical target name (hub, ct, cu, cm).
+// VPSProbeStats holds probe results keyed by stable target ID.
 type VPSProbeStats map[string]VPSProbeTargetStats
 
 // Data that does not change during process lifetime and is not needed in All Systems table

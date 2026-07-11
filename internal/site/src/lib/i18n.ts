@@ -2,76 +2,47 @@ import type { Messages } from "@lingui/core"
 import { i18n } from "@lingui/core"
 import { t } from "@lingui/core/macro"
 import { detect, fromNavigator, fromStorage } from "@lingui/detect-locale"
-import languages from "@/lib/languages"
 import { messages as enMessages } from "@/locales/en/en"
 import { BatteryState } from "./enums"
 import { $direction } from "./stores"
 
-const rtlLanguages = new Set(["ar", "fa", "he"])
-
-// activates locale
 function activateLocale(locale: string, messages: Messages = enMessages) {
 	i18n.load(locale, messages)
 	i18n.activate(locale)
 	document.documentElement.lang = locale
 	localStorage.setItem("lang", locale)
-	$direction.set(rtlLanguages.has(locale) ? "rtl" : "ltr")
+	$direction.set("ltr")
 }
 
-// dynamically loads translations for the given locale
 export async function dynamicActivate(locale: string) {
-	if (locale === "en") {
-		activateLocale(locale)
+	const resolved = normalizeLocale(locale)
+	if (resolved === "en") {
+		activateLocale(resolved)
 		return
 	}
 	try {
-		if (locale === "zh-HK") {
-			const [localeModule, zhCNModule] = await Promise.all([
-				import("../locales/zh-HK/zh-HK.ts"),
-				import("../locales/zh-CN/zh-CN.ts"),
-			])
-			const merged: Messages = { ...enMessages, ...zhCNModule.messages, ...localeModule.messages }
-			activateLocale(locale, merged)
-		} else {
-			const { messages }: { messages: Messages } = await import(`../locales/${locale}/${locale}.ts`)
-			const merged: Messages = { ...enMessages, ...messages }
-			activateLocale(locale, merged)
-		}
+		const { messages }: { messages: Messages } = await import("../locales/zh-CN/zh-CN.ts")
+		const merged: Messages = { ...enMessages, ...messages }
+		activateLocale(resolved, merged)
 	} catch (error) {
-		console.error(`Error loading ${locale}`, error)
+		console.error("Error loading zh-CN", error)
 		activateLocale("en")
 	}
 }
 
-const legacyZhMap: Record<string, string> = {
-	zh: "zh-HK",
-	"zh-TW": "zh-HK",
-	"zh-MO": "zh-HK",
-	"zh-Hant": "zh-HK",
-	"zh-Hans": "zh-CN",
+function normalizeLocale(raw: string | null | undefined): "en" | "zh-CN" {
+	if (!raw) return "en"
+	const lower = raw.toLowerCase()
+	if (lower === "zh" || lower.startsWith("zh-")) return "zh-CN"
+	return "en"
 }
 
-export function getLocale() {
-	let locale = detect(fromStorage("lang"), fromNavigator(), "en")
+export function getLocale(): "en" | "zh-CN" {
+	const detected = detect(fromStorage("lang"), fromNavigator(), "en")
 	if (import.meta.env.DEV) {
-		console.log("detected locale", locale)
+		console.log("detected locale", detected)
 	}
-	if (locale) {
-		const mapped = legacyZhMap[locale]
-		if (mapped) {
-			localStorage.setItem("lang", mapped)
-			return mapped
-		}
-		if (locale.startsWith("zh-")) {
-			if (locale === "zh-HK") return "zh-HK"
-			return "zh-CN"
-		}
-	}
-	locale = (locale || "en").split("-")[0]
-	if (!languages.some((l) => l[0] === locale)) {
-		locale = "en"
-	}
-	return locale
+	return normalizeLocale(detected)
 }
 
 ////////////////////////////////////////////////////////

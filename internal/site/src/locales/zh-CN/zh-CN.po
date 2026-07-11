@@ -1056,7 +1056,6 @@ msgid "Loading..."
 msgstr "加载中..."
 
 #: src/components/routes/system/charts/probe-charts.tsx
-#: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Local"
@@ -1432,8 +1431,8 @@ msgid "Quota: {quotaStr} ({pctStr}%)"
 msgstr "配额: {quotaStr} ({pctStr}%)"
 
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Reachable"
-msgstr "可达"
+#~ msgid "Reachable"
+#~ msgstr "可达"
 
 #. Disk read
 #: src/components/routes/system/charts/disk-charts.tsx
@@ -1582,6 +1581,10 @@ msgstr "查看<0>通知设置</0>以配置您接收警报的方式。"
 #: src/components/routes/settings/quiet-hours.tsx
 msgid "Select {foo}"
 msgstr "选择 {foo}"
+
+#: src/components/routes/settings/general.tsx
+msgid "Select your preferred display language."
+msgstr "选择您偏好的显示语言。"
 
 #: src/components/routes/settings/heartbeat.tsx
 msgid "Send a single heartbeat ping to verify your endpoint is working."
@@ -1936,8 +1939,8 @@ msgid "Unlimited"
 msgstr "无限制"
 
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Unreachable"
-msgstr "不可达"
+#~ msgid "Unreachable"
+#~ msgstr "不可达"
 
 #. Context: System is up
 #: src/components/routes/system/info-bar.tsx
@@ -2035,8 +2038,8 @@ msgid "Waiting for enough records to display"
 msgstr "正在收集足够的数据来显示"
 
 #: src/components/routes/settings/general.tsx
-msgid "Want to help improve our translations? Check <0>Crowdin</0> for details."
-msgstr "想帮助我们改进翻译吗？查看<0>Crowdin</0>以获取更多详细信息。"
+#~ msgid "Want to help improve our translations? Check <0>Crowdin</0> for details."
+#~ msgstr "想帮助我们改进翻译吗？查看<0>Crowdin</0>以获取更多详细信息。"
 
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Wants"

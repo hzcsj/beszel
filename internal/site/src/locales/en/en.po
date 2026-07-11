@@ -1056,7 +1056,6 @@ msgid "Loading..."
 msgstr "Loading..."
 
 #: src/components/routes/system/charts/probe-charts.tsx
-#: src/components/routes/system/charts/probe-charts.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Local"
@@ -1432,8 +1431,8 @@ msgid "Quota: {quotaStr} ({pctStr}%)"
 msgstr "Quota: {quotaStr} ({pctStr}%)"
 
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Reachable"
-msgstr "Reachable"
+#~ msgid "Reachable"
+#~ msgstr "Reachable"
 
 #. Disk read
 #: src/components/routes/system/charts/disk-charts.tsx
@@ -1582,6 +1581,10 @@ msgstr "See <0>notification settings</0> to configure how you receive alerts."
 #: src/components/routes/settings/quiet-hours.tsx
 msgid "Select {foo}"
 msgstr "Select {foo}"
+
+#: src/components/routes/settings/general.tsx
+msgid "Select your preferred display language."
+msgstr "Select your preferred display language."
 
 #: src/components/routes/settings/heartbeat.tsx
 msgid "Send a single heartbeat ping to verify your endpoint is working."
@@ -1936,8 +1939,8 @@ msgid "Unlimited"
 msgstr "Unlimited"
 
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Unreachable"
-msgstr "Unreachable"
+#~ msgid "Unreachable"
+#~ msgstr "Unreachable"
 
 #. Context: System is up
 #: src/components/routes/system/info-bar.tsx
@@ -2035,8 +2038,8 @@ msgid "Waiting for enough records to display"
 msgstr "Waiting for enough records to display"
 
 #: src/components/routes/settings/general.tsx
-msgid "Want to help improve our translations? Check <0>Crowdin</0> for details."
-msgstr "Want to help improve our translations? Check <0>Crowdin</0> for details."
+#~ msgid "Want to help improve our translations? Check <0>Crowdin</0> for details."
+#~ msgstr "Want to help improve our translations? Check <0>Crowdin</0> for details."
 
 #: src/components/systemd-table/systemd-table.tsx
 msgid "Wants"

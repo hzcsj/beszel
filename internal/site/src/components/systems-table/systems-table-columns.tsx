@@ -42,6 +42,8 @@ import {
 import { formatLoad } from "@/lib/format-load"
 import { batteryStateTranslations } from "@/lib/i18n"
 import type { SystemRecord } from "@/types"
+import { compareSystemsByOrder } from "@/lib/system-order"
+import { resolveProbeTargets, getProbeLossLevel, getListLatency } from "@/lib/probe-utils"
 import { SystemDialog } from "../add-system"
 import AlertButton from "../alerts/alert-button"
 import { $router, Link } from "../router"
@@ -116,7 +118,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			accessorKey: "name",
 			id: "system",
 			name: () => t`System`,
-			sortingFn: (a, b) => a.original.name.localeCompare(b.original.name),
+			sortingFn: (a, b) => compareSystemsByOrder(a.original, b.original),
 			filterFn: (() => {
 				let filterInput = ""
 				let filterInputLower = ""
@@ -435,15 +437,14 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 		},
 		{
 			accessorFn: ({ info }) => {
-				const vp = info.vp
-				if (!vp) return undefined
+				const resolved = resolveProbeTargets(info.vp)
+				if (resolved.length === 0) return undefined
 				let worstLoss = 0
 				let worstLat = 0
-				for (const key of ["hub", "ct", "cu", "cm"]) {
-					const p = vp[key]
-					if (!p || p.local) continue
-					if ((p.loss ?? 0) > worstLoss) worstLoss = p.loss ?? 0
-					const lat = p.latw ?? p.lat1 ?? p.lat ?? 0
+				for (const t of resolved) {
+					if (t.stats.local) continue
+					if ((t.stats.loss ?? 0) > worstLoss) worstLoss = t.stats.loss ?? 0
+					const lat = getListLatency(t.stats) ?? 0
 					if (lat > worstLat) worstLat = lat
 				}
 				return worstLoss * 10000 + worstLat
@@ -457,57 +458,37 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			cell(info) {
 				const vp = info.row.original.info.vp
 				if (!vp) return null
-				const targets = ["hub", "ct", "cu", "cm"] as const
-				const labels = { hub: "HUB", ct: "CT", cu: "CU", cm: "CM" }
+				const resolved = resolveProbeTargets(vp)
+				if (resolved.length === 0) return null
 
-				const parts = targets.map((key) => {
-					const p = vp[key]
-					if (!p) return { key, latStr: "--", muted: true, warn: false, crit: false, local: false }
-					if (p.local) return { key, latStr: t`Local`, muted: true, warn: false, crit: false, local: true }
-					const lat = p.latw ?? p.lat1 ?? p.lat
-					const latStr = lat != null && lat > 0 ? `${Math.round(lat)}` : "--"
-					const loss = p.loss ?? 0
-					const crit = loss >= 20
-					const warn = !crit && loss >= 5
-					return { key, latStr, muted: false, warn, crit, local: false }
+				const parts = resolved.map((rt) => {
+					const p = rt.stats
+					if (p.local) return { id: rt.id, latStr: t`Local`, level: "muted" as const }
+					const lat = getListLatency(p)
+					const latStr = lat != null ? `${Math.round(lat)}` : "--"
+					const level = getProbeLossLevel(p.loss, false, lat == null && p.loss == null)
+					return { id: rt.id, latStr, level }
 				})
-
-				const tooltipLines: string[] = []
-				for (const key of targets) {
-					const p = vp[key]
-					if (!p) continue
-					if (p.local) {
-						tooltipLines.push(`${labels[key]}: ${t`Local`}`)
-						if (p.target) tooltipLines.push(`  ${p.target}`)
-						continue
-					}
-					const status = p.ok ? t`Reachable` : t`Unreachable`
-					const windowLat = p.latw ?? p.lat1 ?? p.lat
-					const latStr = windowLat != null && windowLat > 0 ? `${Math.round(windowLat)}ms` : "--"
-					const lossStr = `${decimalString(p.loss ?? 0, 1)}%`
-					tooltipLines.push(`${labels[key]}: ${status} | ${latStr} / ${lossStr}`)
-					if (p.target) tooltipLines.push(`  ${p.target}`)
-					if (p.n) {
-						const samplesLabel = t`Samples`
-						tooltipLines.push(`  ${samplesLabel}: ${p.n}`)
-					}
-					if (p.ts) {
-						const d = new Date(p.ts * 1000)
-						const lastUpdated = t`Last updated`
-						tooltipLines.push(`  ${lastUpdated}: ${d.toLocaleTimeString()}`)
-					}
-				}
 
 				return (
 					<Tooltip>
 						<TooltipTrigger asChild>
-							<span className="tabular-nums whitespace-nowrap text-xs">
+							<button
+								type="button"
+								className="tabular-nums whitespace-nowrap text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm cursor-default"
+							>
 								{parts.map((p, i) => (
-									<span key={p.key}>
+									<span key={p.id}>
 										{i > 0 && <span className="text-muted-foreground"> | </span>}
 										<span
 											className={cn(
-												p.crit ? "text-red-500" : p.warn ? "text-yellow-500" : p.muted ? "text-muted-foreground" : ""
+												p.level === "critical"
+													? "text-red-500"
+													: p.level === "warning"
+														? "text-yellow-500"
+														: p.level === "muted"
+															? "text-muted-foreground"
+															: ""
 											)}
 										>
 											{p.latStr}
@@ -515,14 +496,62 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 									</span>
 								))}
 								<span className="text-muted-foreground"> ms</span>
-							</span>
+							</button>
 						</TooltipTrigger>
 						<TooltipContent side="bottom" className="max-w-sm">
-							<p className="text-xs text-muted-foreground mb-1">HUB | CT | CU | CM</p>
-							<div className="grid gap-0.5 text-xs font-mono whitespace-pre">
-								{tooltipLines.map((line, i) => (
-									<span key={i}>{line}</span>
-								))}
+							<div className="grid gap-1 text-xs font-mono">
+								{resolved.map((rt) => {
+									const p = rt.stats
+									if (p.local) {
+										return (
+											<div key={rt.id}>
+												<span className="font-semibold">{rt.label}</span>
+												<span className="text-muted-foreground">: {t`Local`}</span>
+											</div>
+										)
+									}
+									const lat = getListLatency(p)
+									const latStr = lat != null ? `${Math.round(lat)} ms` : "--"
+									const lossStr = p.loss != null ? `${decimalString(p.loss, 1)}%` : "--"
+									const level = getProbeLossLevel(p.loss, false, lat == null && p.loss == null)
+									return (
+										<div key={rt.id}>
+											<div>
+												<span className="font-semibold">{rt.label}</span>
+												<span>: </span>
+												<span
+													className={cn(
+														level === "critical"
+															? "text-red-500"
+															: level === "warning"
+																? "text-yellow-500"
+																: level === "muted"
+																	? "text-muted-foreground"
+																	: ""
+													)}
+												>
+													{latStr} / {lossStr}
+												</span>
+											</div>
+											{(p.target || p.n != null || p.ts != null) && (
+												<div className="text-muted-foreground text-[10px] ps-2">
+													{p.target && <div className="truncate max-w-[240px]">{p.target}</div>}
+													{p.n != null && (
+														<span>
+															{t`Samples`}: {p.n}
+														</span>
+													)}
+													{p.n != null && p.ts != null && <span> · </span>}
+													{p.ts != null && (
+														<span>
+															{t`Last updated`}: {new Date(p.ts * 1000).toLocaleTimeString()}
+														</span>
+													)}
+												</div>
+											)}
+										</div>
+									)
+								})}
 							</div>
 						</TooltipContent>
 					</Tooltip>

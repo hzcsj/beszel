@@ -1061,3 +1061,50 @@ func TestAverageSystemStats_VPSProbe_LocalRecursiveAggregation(t *testing.T) {
 	assert.Equal(t, uint16(48), ct.Samples1m)
 	assert.InDelta(t, 35.0, ct.LatencyAvg1mMs, 0.01)
 }
+
+func TestAverageSystemStats_VPSProbe_LabelPosMetadataPreserved(t *testing.T) {
+	input := []system.Stats{
+		{VPSProbe: system.VPSProbeStats{
+			"cn": {LatencyAvg1mMs: 50, LossPct1m: 1, Samples1m: 12, Label: "旧标签", Position: 1, Target: "old.addr:80"},
+		}},
+		{VPSProbe: system.VPSProbeStats{
+			"cn": {LatencyAvg1mMs: 60, LossPct1m: 2, Samples1m: 12, Label: "新标签", Position: 2, Target: "new.addr:443"},
+		}},
+	}
+	result := records.AverageSystemStatsSlice(input)
+	require.NotNil(t, result.VPSProbe)
+	cn := result.VPSProbe["cn"]
+	assert.Equal(t, "新标签", cn.Label, "should preserve latest non-empty label")
+	assert.Equal(t, uint8(2), cn.Position, "should preserve latest non-zero position")
+	assert.Equal(t, "new.addr:443", cn.Target, "should preserve latest non-empty target")
+}
+
+func TestAverageSystemStats_VPSProbe_DynamicIDPreserved(t *testing.T) {
+	input := []system.Stats{
+		{VPSProbe: system.VPSProbeStats{
+			"custom_id": {LatencyAvg1mMs: 30, Samples1m: 12, Label: "Custom", Position: 1},
+		}},
+		{VPSProbe: system.VPSProbeStats{
+			"custom_id": {LatencyAvg1mMs: 40, Samples1m: 12, Label: "Custom", Position: 1},
+		}},
+	}
+	result := records.AverageSystemStatsSlice(input)
+	require.NotNil(t, result.VPSProbe)
+	_, ok := result.VPSProbe["custom_id"]
+	assert.True(t, ok, "dynamic custom_id key should be preserved in aggregation")
+}
+
+func TestAverageSystemStats_VPSProbe_EmptyLabelNotOverwrite(t *testing.T) {
+	input := []system.Stats{
+		{VPSProbe: system.VPSProbeStats{
+			"cn": {LatencyAvg1mMs: 50, Samples1m: 12, Label: "CN电信", Position: 1},
+		}},
+		{VPSProbe: system.VPSProbeStats{
+			"cn": {LatencyAvg1mMs: 60, Samples1m: 12, Label: "", Position: 0},
+		}},
+	}
+	result := records.AverageSystemStatsSlice(input)
+	cn := result.VPSProbe["cn"]
+	assert.Equal(t, "CN电信", cn.Label, "empty label should not overwrite non-empty")
+	assert.Equal(t, uint8(1), cn.Position, "zero pos should not overwrite non-zero")
+}

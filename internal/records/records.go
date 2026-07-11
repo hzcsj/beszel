@@ -446,7 +446,8 @@ func AverageSystemStatsSlice(records []system.Stats) system.Stats {
 	return sum
 }
 
-// averageVPSProbeStats computes sample-weighted probe aggregates per canonical target.
+// averageVPSProbeStats computes sample-weighted probe aggregates per target,
+// preserving the latest non-empty label, position, and target metadata.
 func averageVPSProbeStats(records []system.Stats) system.VPSProbeStats {
 	type targetAccum struct {
 		totalSamples   float64
@@ -454,6 +455,9 @@ func averageVPSProbeStats(records []system.Stats) system.VPSProbeStats {
 		weightedLatSum float64
 		successSamples float64
 		hasLocal       bool
+		latestLabel    string
+		latestPos      uint8
+		latestTarget   string
 	}
 	accum := make(map[string]*targetAccum)
 
@@ -467,6 +471,15 @@ func averageVPSProbeStats(records []system.Stats) system.VPSProbeStats {
 			if !ok {
 				a = &targetAccum{}
 				accum[key] = a
+			}
+			if ts.Label != "" {
+				a.latestLabel = ts.Label
+			}
+			if ts.Position > 0 {
+				a.latestPos = ts.Position
+			}
+			if ts.Target != "" {
+				a.latestTarget = ts.Target
 			}
 			if ts.Local {
 				a.hasLocal = true
@@ -496,13 +509,21 @@ func averageVPSProbeStats(records []system.Stats) system.VPSProbeStats {
 			ts := system.VPSProbeTargetStats{
 				Samples1m: uint16(a.totalSamples),
 				LossPct1m: twoDecimals(a.failedSamples / a.totalSamples * 100),
+				Label:     a.latestLabel,
+				Position:  a.latestPos,
+				Target:    a.latestTarget,
 			}
 			if a.successSamples > 0 {
 				ts.LatencyAvg1mMs = twoDecimals(a.weightedLatSum / a.successSamples)
 			}
 			result[key] = ts
 		} else if a.hasLocal {
-			result[key] = system.VPSProbeTargetStats{Local: true}
+			result[key] = system.VPSProbeTargetStats{
+				Local:    true,
+				Label:    a.latestLabel,
+				Position: a.latestPos,
+				Target:   a.latestTarget,
+			}
 		}
 	}
 	if len(result) == 0 {
