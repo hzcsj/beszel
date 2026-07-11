@@ -475,7 +475,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 						<TooltipTrigger asChild>
 							<button
 								type="button"
-								className="tabular-nums whitespace-nowrap text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm cursor-default"
+								className="relative z-10 tabular-nums whitespace-nowrap text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm cursor-default"
 							>
 								{parts.map((p, i) => (
 									<span key={p.id}>
