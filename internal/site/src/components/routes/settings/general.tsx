@@ -26,8 +26,11 @@ export default function SettingsProfilePage({ userSettings }: { userSettings: Us
 	async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
 		e.preventDefault()
 		setIsLoading(true)
-		const formData = new FormData(e.target as HTMLFormElement)
-		const data = Object.fromEntries(formData) as Partial<UserSettings>
+		const formData = new FormData(e.currentTarget)
+		const data = {
+			...Object.fromEntries(formData),
+			layoutWidth,
+		} as Partial<UserSettings>
 		await saveSettings(data)
 		setIsLoading(false)
 	}

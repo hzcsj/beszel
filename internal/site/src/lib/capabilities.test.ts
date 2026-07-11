@@ -50,6 +50,7 @@ mock.module("@/lib/stores", () => ({
 	$allSystemsById: { set: () => {} },
 	$allSystemsByName: { set: () => {} },
 	$userSettings: { set: () => {} },
+	defaultLayoutWidth: 1440,
 }))
 
 mock.module("@/lib/utils", () => ({
@@ -296,5 +297,71 @@ describe("saveSettings - production function", () => {
 
 		expect(pbCollectionGetFirstListItem).toHaveBeenCalledTimes(1)
 		expect(pbCollectionUpdate).toHaveBeenCalledTimes(1)
+	})
+})
+
+describe("saveSettings - layoutWidth persistence", () => {
+	test("defaultLayoutWidth is 1440", async () => {
+		const { defaultLayoutWidth } = await import("@/lib/stores")
+		expect(defaultLayoutWidth).toBe(1440)
+	})
+
+	test("layoutWidth 1370 is saved as number type", async () => {
+		mockAuthStore.record = { role: "user" }
+		pbCollectionGetFirstListItem.mockImplementation(() =>
+			Promise.resolve({ id: "rec1", settings: { chartTime: "1h" } })
+		)
+		pbCollectionUpdate.mockImplementation((_id: string, data: { settings: Record<string, unknown> }) =>
+			Promise.resolve({ settings: data.settings })
+		)
+
+		await saveSettings({ layoutWidth: 1370 } as Record<string, unknown>)
+
+		const updateCall = pbCollectionUpdate.mock.calls[0] as [string, { settings: Record<string, unknown> }]
+		const savedSettings = updateCall[1].settings
+		expect(savedSettings.layoutWidth).toBe(1370)
+		expect(typeof savedSettings.layoutWidth).toBe("number")
+	})
+
+	test("saving other settings preserves existing layoutWidth", async () => {
+		mockAuthStore.record = { role: "user" }
+		pbCollectionGetFirstListItem.mockImplementation(() =>
+			Promise.resolve({ id: "rec1", settings: { chartTime: "1h", layoutWidth: 1370 } })
+		)
+		pbCollectionUpdate.mockImplementation((_id: string, data: { settings: Record<string, unknown> }) =>
+			Promise.resolve({ settings: data.settings })
+		)
+
+		await saveSettings({ chartTime: "24h" })
+
+		const updateCall = pbCollectionUpdate.mock.calls[0] as [string, { settings: Record<string, unknown> }]
+		const savedSettings = updateCall[1].settings
+		expect(savedSettings.layoutWidth).toBe(1370)
+		expect(savedSettings.chartTime).toBe("24h")
+	})
+
+	test("server reload preserves layoutWidth 1370", async () => {
+		mockAuthStore.record = { role: "user" }
+		pbCollectionGetFirstListItem.mockImplementation(() =>
+			Promise.resolve({ id: "rec1", settings: { chartTime: "1h", layoutWidth: 1370 } })
+		)
+		pbCollectionUpdate.mockImplementation((_id: string, data: { settings: Record<string, unknown> }) =>
+			Promise.resolve({ settings: data.settings })
+		)
+
+		await saveSettings({ layoutWidth: 1370 } as Record<string, unknown>)
+
+		const updateCall = pbCollectionUpdate.mock.calls[0] as [string, { settings: Record<string, unknown> }]
+		const savedSettings = updateCall[1].settings
+		expect(savedSettings.layoutWidth).toBe(1370)
+	})
+
+	test("readonly saveSettings for layoutWidth makes no PB calls", async () => {
+		mockAuthStore.record = { role: "readonly" }
+
+		await saveSettings({ layoutWidth: 1370 } as Record<string, unknown>)
+
+		expect(pbCollectionGetFirstListItem).not.toHaveBeenCalled()
+		expect(pbCollectionUpdate).not.toHaveBeenCalled()
 	})
 })

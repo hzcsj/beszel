@@ -7,7 +7,6 @@ import type { CellContext, ColumnDef, HeaderContext } from "@tanstack/react-tabl
 import type { ClassValue } from "clsx"
 import {
 	ArrowDownUpIcon,
-	ArrowUpDownIcon,
 	ChevronRightSquareIcon,
 	ClockArrowUp,
 	CopyIcon,
@@ -27,13 +26,14 @@ import { memo, useMemo, useRef, useState } from "react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip"
 import { isReadOnlyUser, pb } from "@/lib/api"
 import { BatteryState, ConnectionType, connectionTypeLabels, MeterState, SystemStatus } from "@/lib/enums"
-import { $longestSystemNameLen, $userSettings } from "@/lib/stores"
+import { $userSettings } from "@/lib/stores"
 import {
 	cn,
-	compactSig3,
 	copyToClipboard,
 	decimalString,
 	formatBytes,
+	formatCompactWithUnit,
+	formatProbeTooltipValue,
 	formatTemperature,
 	getHostDisplayValue,
 	parseSemVer,
@@ -112,8 +112,7 @@ function billingModeLabel(mode: string): string {
 export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<SystemRecord>[] {
 	return [
 		{
-			// size: 200,
-			size: 100,
+			size: 0,
 			minSize: 0,
 			accessorKey: "name",
 			id: "system",
@@ -157,7 +156,6 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			cell: (info) => {
 				const system = info.row.original
 				const { name, id } = system
-				const longestName = useStore($longestSystemNameLen)
 				const linkUrl = getPagePath($router, "system", { id })
 				const hostDisplay = getHostDisplayValue(system)
 
@@ -170,7 +168,6 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 									<Link
 										href={linkUrl}
 										className="truncate z-10 relative"
-										style={{ width: `${longestName / 1.05}ch` }}
 										onMouseEnter={(e) => {
 											const a = e.currentTarget
 											if (a.scrollWidth > a.clientWidth) {
@@ -198,6 +195,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			accessorFn: ({ info }) => info.cpu || undefined,
 			id: "cpu",
 			name: () => t`CPU`,
+			size: 105,
 			cell: viewMode === "table" ? TableCellEmbeddedMeter : TableCellWithMeter,
 			Icon: CpuIcon,
 			header: sortableHeader,
@@ -206,6 +204,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			accessorFn: ({ info }) => info.mp || undefined,
 			id: "memory",
 			name: () => t`Memory`,
+			size: 105,
 			cell: viewMode === "table" ? TableCellEmbeddedMeter : TableCellWithMeter,
 			Icon: MemoryStickIcon,
 			header: sortableHeader,
@@ -214,6 +213,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			accessorFn: ({ info }) => info.dp || undefined,
 			id: "disk",
 			name: () => t`Disk`,
+			size: 105,
 			cell: (info: CellContext<SystemRecord, unknown>) =>
 				info.row.original.info.efs
 					? DiskCellWithMultiple(info, viewMode)
@@ -291,9 +291,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 					const ul = formatBytes(sysInfo.nb[0], true, userSettings.unitNet, false)
 					return (
 						<span className="tabular-nums whitespace-nowrap">
-							↓{compactSig3(dl.value)}
-							{dl.unit} | ↑{compactSig3(ul.value)}
-							{ul.unit}
+							↓{formatCompactWithUnit(dl.value, dl.unit)} | ↑{formatCompactWithUnit(ul.value, ul.unit)}
 						</span>
 					)
 				}
@@ -303,9 +301,70 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 				const { value, unit } = formatBytes(bb, true, userSettings.unitNet, false)
 				return (
 					<span className="tabular-nums whitespace-nowrap text-muted-foreground">
-						{compactSig3(value)}
-						{unit}
+						{formatCompactWithUnit(value, unit)}
 					</span>
+				)
+			},
+		},
+		{
+			accessorFn: ({ info }) => (info.vt ? (info.vt.bill ?? 0) : undefined),
+			id: "cycleTraffic",
+			name: () => t`Cycle Traffic`,
+			size: 0,
+			Icon: ArrowDownUpIcon,
+			header: sortableHeader,
+			sortUndefined: "last",
+			cell(info) {
+				const vt = info.row.original.info.vt
+				if (!vt) {
+					return null
+				}
+				const rx = formatBytes(vt.crx ?? 0)
+				const tx = formatBytes(vt.ctx ?? 0)
+
+				const quotaPct = vt.quota ? ((vt.bill ?? 0) / vt.quota) * 100 : 0
+				const projPct = vt.quota ? ((vt.proj ?? 0) / vt.quota) * 100 : 0
+				const warnClass = quotaPct >= 90 ? "text-red-500" : quotaPct >= 80 || projPct > 100 ? "text-yellow-500" : ""
+
+				const tooltipLines: string[] = []
+				if (vt.quota) {
+					const q = formatBytes(vt.quota)
+					const quotaStr = `${decimalString(q.value, 2)} ${q.unit}`
+					const pctStr = decimalString(quotaPct, 1)
+					tooltipLines.push(t`Quota: ${quotaStr} (${pctStr}%)`)
+				}
+				if (vt.proj) {
+					const p = formatBytes(vt.proj)
+					const projStr = `${decimalString(p.value, 2)} ${p.unit}`
+					tooltipLines.push(t`Projected: ${projStr}`)
+				}
+				if (vt.dl !== undefined) tooltipLines.push(t`Days left: ${vt.dl}`)
+				if (vt.mode) {
+					const modeLabel = billingModeLabel(vt.mode)
+					tooltipLines.push(t`Billing mode: ${modeLabel}`)
+				}
+
+				const content = (
+					<span className={cn("tabular-nums whitespace-nowrap", warnClass)}>
+						↓{formatCompactWithUnit(rx.value, rx.unit)} | ↑{formatCompactWithUnit(tx.value, tx.unit)}
+					</span>
+				)
+
+				if (tooltipLines.length === 0) {
+					return content
+				}
+
+				return (
+					<Tooltip>
+						<TooltipTrigger asChild>{content}</TooltipTrigger>
+						<TooltipContent side="bottom" className="max-w-xs">
+							<div className="grid gap-0.5 text-xs">
+								{tooltipLines.map((line, i) => (
+									<span key={i}>{line}</span>
+								))}
+							</div>
+						</TooltipContent>
+					</Tooltip>
 				)
 			},
 		},
@@ -355,75 +414,9 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<span className="tabular-nums whitespace-nowrap">
-								↓{compactSig3(rx.value)}
-								{rx.unit} | ↑{compactSig3(tx.value)}
-								{tx.unit}
+								↓{formatCompactWithUnit(rx.value, rx.unit)} | ↑{formatCompactWithUnit(tx.value, tx.unit)}
 							</span>
 						</TooltipTrigger>
-						<TooltipContent side="bottom" className="max-w-xs">
-							<div className="grid gap-0.5 text-xs">
-								{tooltipLines.map((line, i) => (
-									<span key={i}>{line}</span>
-								))}
-							</div>
-						</TooltipContent>
-					</Tooltip>
-				)
-			},
-		},
-		{
-			accessorFn: ({ info }) => (info.vt ? (info.vt.bill ?? 0) : undefined),
-			id: "cycleTraffic",
-			name: () => t`Cycle Traffic`,
-			size: 0,
-			Icon: ArrowDownUpIcon,
-			header: sortableHeader,
-			sortUndefined: "last",
-			cell(info) {
-				const vt = info.row.original.info.vt
-				if (!vt) {
-					return null
-				}
-				const rx = formatBytes(vt.crx ?? 0)
-				const tx = formatBytes(vt.ctx ?? 0)
-
-				const quotaPct = vt.quota ? ((vt.bill ?? 0) / vt.quota) * 100 : 0
-				const projPct = vt.quota ? ((vt.proj ?? 0) / vt.quota) * 100 : 0
-				const warnClass = quotaPct >= 90 ? "text-red-500" : quotaPct >= 80 || projPct > 100 ? "text-yellow-500" : ""
-
-				const tooltipLines: string[] = []
-				if (vt.quota) {
-					const q = formatBytes(vt.quota)
-					const quotaStr = `${decimalString(q.value, 2)} ${q.unit}`
-					const pctStr = decimalString(quotaPct, 1)
-					tooltipLines.push(t`Quota: ${quotaStr} (${pctStr}%)`)
-				}
-				if (vt.proj) {
-					const p = formatBytes(vt.proj)
-					const projStr = `${decimalString(p.value, 2)} ${p.unit}`
-					tooltipLines.push(t`Projected: ${projStr}`)
-				}
-				if (vt.dl !== undefined) tooltipLines.push(t`Days left: ${vt.dl}`)
-				if (vt.mode) {
-					const modeLabel = billingModeLabel(vt.mode)
-					tooltipLines.push(t`Billing mode: ${modeLabel}`)
-				}
-
-				const content = (
-					<span className={cn("tabular-nums whitespace-nowrap", warnClass)}>
-						↓{compactSig3(rx.value)}
-						{rx.unit} | ↑{compactSig3(tx.value)}
-						{tx.unit}
-					</span>
-				)
-
-				if (tooltipLines.length === 0) {
-					return content
-				}
-
-				return (
-					<Tooltip>
-						<TooltipTrigger asChild>{content}</TooltipTrigger>
 						<TooltipContent side="bottom" className="max-w-xs">
 							<div className="grid gap-0.5 text-xs">
 								{tooltipLines.map((line, i) => (
@@ -475,7 +468,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 						<TooltipTrigger asChild>
 							<button
 								type="button"
-								className="relative z-10 tabular-nums whitespace-nowrap text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm cursor-default"
+								className="relative z-10 tabular-nums whitespace-nowrap text-sm font-normal focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm cursor-default"
 							>
 								{parts.map((p, i) => (
 									<span key={p.id}>
@@ -530,7 +523,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 																: ""
 												)}
 											>
-												{latStr}ms,{lossStr}%
+												{formatProbeTooltipValue(latStr, lossStr)}
 											</span>
 										</div>
 									)
@@ -546,7 +539,6 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			id: "temp",
 			name: () => t({ message: "Temp", comment: "Temperature label in systems table" }),
 			size: 50,
-			hideSort: true,
 			Icon: ThermometerIcon,
 			header: sortableHeader,
 			cell(info) {
@@ -570,7 +562,6 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			size: 70,
 			Icon: BatteryMediumIcon,
 			header: sortableHeader,
-			hideSort: true,
 			cell(info) {
 				const [pct, state] = info.row.original.info.bat ?? []
 				if (pct === undefined) {
@@ -616,7 +607,6 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			size: 50,
 			Icon: TerminalSquareIcon,
 			header: sortableHeader,
-			hideSort: true,
 			sortingFn: (a, b) => {
 				// sort priorities: 1) failed services, 2) total services
 				const [totalCountA, numFailedA] = a.original.info.sv ?? [0, 0]
@@ -655,7 +645,6 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			size: 40,
 			Icon: ClockArrowUp,
 			header: sortableHeader,
-			hideSort: true,
 			cell(info) {
 				const uptime = info.getValue() as number
 				if (!uptime) {
@@ -670,7 +659,6 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			name: () => t`Agent`,
 			size: 50,
 			Icon: WifiIcon,
-			hideSort: true,
 			header: sortableHeader,
 			cell(info) {
 				const version = info.getValue() as string
@@ -724,7 +712,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 function sortableHeader(context: HeaderContext<SystemRecord, unknown>) {
 	const { column } = context
 	// @ts-expect-error
-	const { Icon, hideSort, name }: { Icon: React.ElementType; name: () => string; hideSort: boolean } = column.columnDef
+	const { Icon, name }: { Icon: React.ElementType; name: () => string } = column.columnDef
 	const isSorted = column.getIsSorted()
 	return (
 		<Button
@@ -734,7 +722,6 @@ function sortableHeader(context: HeaderContext<SystemRecord, unknown>) {
 		>
 			{Icon && <Icon className="me-2 size-4" />}
 			{name()}
-			{hideSort || <ArrowUpDownIcon className="ms-2 size-4" />}
 		</Button>
 	)
 }
@@ -784,10 +771,12 @@ function TableCellEmbeddedMeter(info: CellContext<SystemRecord, unknown>) {
 			aria-label={label}
 		>
 			<span className={fillClass} style={{ width: `${clampedWidth}%` }} />
-			<span className="absolute inset-0 flex items-center justify-center text-xs pointer-events-none">{label}</span>
+			<span className="absolute inset-0 flex items-center justify-center text-sm font-normal pointer-events-none">
+				{label}
+			</span>
 			<span
 				aria-hidden="true"
-				className="absolute inset-0 flex items-center justify-center text-xs text-black pointer-events-none"
+				className="absolute inset-0 flex items-center justify-center text-sm font-normal text-black pointer-events-none"
 				style={{ clipPath: `inset(0 ${100 - clampedWidth}% 0 0)` }}
 			>
 				{label}
@@ -849,12 +838,12 @@ function DiskCellWithMultiple(info: CellContext<SystemRecord, unknown>, viewMode
 								className={cn("absolute inset-0", getMeterClass(rootDiskPct))}
 								style={{ width: `${Math.min(Math.max(rootDiskPct, 0), 100)}%` }}
 							/>
-							<span className="absolute inset-0 flex items-center justify-center text-xs pointer-events-none">
+							<span className="absolute inset-0 flex items-center justify-center text-sm font-normal pointer-events-none">
 								{decimalString(rootDiskPct, rootDiskPct >= 10 ? 1 : 2)}%
 							</span>
 							<span
 								aria-hidden="true"
-								className="absolute inset-0 flex items-center justify-center text-xs text-black pointer-events-none"
+								className="absolute inset-0 flex items-center justify-center text-sm font-normal text-black pointer-events-none"
 								style={{ clipPath: `inset(0 ${100 - Math.min(Math.max(rootDiskPct, 0), 100)}% 0 0)` }}
 							>
 								{decimalString(rootDiskPct, rootDiskPct >= 10 ? 1 : 2)}%

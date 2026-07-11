@@ -199,17 +199,86 @@ export function decimalString(num: number, digits = 2) {
 	return formatter.format(num)
 }
 
-let sig3Formatter: Intl.NumberFormat | undefined
-/** Format nonzero finite value to 3 significant digits; zero returns "0" */
-export function compactSig3(num: number): string {
+/**
+ * Compact metric format: max 3 digit characters in the mantissa.
+ * - 0 → "0"
+ * - [0, 1): fixed 2 decimals (e.g. 0.13)
+ * - [1, 10): 2 decimals (e.g. 1.23)
+ * - [10, 100): 1 decimal (e.g. 12.3)
+ * - [100, …): 0 decimals (e.g. 123)
+ * Handles rounding across magnitude boundaries (e.g. 9.999 → "10.0").
+ * NaN/Infinity → "0". Negative values preserve sign.
+ */
+export function compactMetricNumber(num: number): string {
 	if (num === 0 || !Number.isFinite(num)) return "0"
-	if (!sig3Formatter) {
-		sig3Formatter = new Intl.NumberFormat(undefined, {
-			minimumSignificantDigits: 3,
-			maximumSignificantDigits: 3,
-		})
+	const neg = num < 0
+	const abs = Math.abs(num)
+
+	function digitsFor(v: number): number {
+		if (v < 1) return 2
+		if (v < 10) return 2
+		if (v < 100) return 1
+		return 0
 	}
-	return sig3Formatter.format(num)
+
+	let digits = digitsFor(abs)
+	let rounded = digits === 0 ? Math.round(abs) : Number(abs.toFixed(digits))
+
+	const newDigits = digitsFor(rounded)
+	if (newDigits < digits) {
+		digits = newDigits
+		rounded = digits === 0 ? Math.round(abs) : Number(abs.toFixed(digits))
+	}
+
+	const formatted = digits === 0 ? rounded.toString() : rounded.toFixed(digits)
+	return (neg ? "-" : "") + formatted
+}
+
+const unitPromotion: Record<string, { factor: number; next: string }> = {
+	B: { factor: 1024, next: "KB" },
+	"B/s": { factor: 1024, next: "KB/s" },
+	KB: { factor: 1024, next: "MB" },
+	"KB/s": { factor: 1024, next: "MB/s" },
+	MB: { factor: 1024, next: "GB" },
+	"MB/s": { factor: 1024, next: "GB/s" },
+	GB: { factor: 1024, next: "TB" },
+	"GB/s": { factor: 1024, next: "TB/s" },
+	TB: { factor: 1024, next: "PB" },
+	"TB/s": { factor: 1024, next: "PB/s" },
+	b: { factor: 1000, next: "Kb" },
+	bps: { factor: 1000, next: "Kbps" },
+	Kb: { factor: 1000, next: "Mb" },
+	Kbps: { factor: 1000, next: "Mbps" },
+	Mb: { factor: 1000, next: "Gb" },
+	Mbps: { factor: 1000, next: "Gbps" },
+	Gb: { factor: 1000, next: "Tb" },
+	Gbps: { factor: 1000, next: "Tbps" },
+}
+
+/** Format a metric value compactly with its unit, promoting the unit when rounding exceeds 999. */
+export function formatCompactWithUnit(value: number, unit: string): string {
+	if (value === 0 || !Number.isFinite(value)) return `0${unit}`
+	const neg = value < 0
+	const abs = Math.abs(value)
+	let num = compactMetricNumber(abs)
+	let finalUnit = unit
+
+	if (Number(num) >= 1000) {
+		const promo = unitPromotion[unit]
+		if (promo) {
+			num = compactMetricNumber(abs / promo.factor)
+			finalUnit = promo.next
+		}
+	}
+
+	return (neg ? "-" : "") + num + finalUnit
+}
+
+/** Format probe tooltip value portion: "123ms 0.0%" or "--" for missing data. */
+export function formatProbeTooltipValue(latStr: string, lossStr: string): string {
+	const latDisplay = latStr === "--" ? "--" : `${latStr}ms`
+	const lossDisplay = lossStr === "--" ? "--" : `${lossStr}%`
+	return `${latDisplay} ${lossDisplay}`
 }
 
 /** Get value from local or session storage */
