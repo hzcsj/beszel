@@ -27,6 +27,7 @@ import { FreeBsdIcon, TuxIcon, WebSocketIcon, WindowsIcon } from "@/components/u
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { ConnectionType, connectionTypeLabels, Os, SystemStatus } from "@/lib/enums"
+import { getUserCapabilities } from "@/lib/api"
 import { cn, formatBytes, getHostDisplayValue, secondsToUptimeString, toFixedFloat } from "@/lib/utils"
 import type { ChartData, SystemDetailsRecord, SystemRecord } from "@/types"
 
@@ -48,6 +49,7 @@ export default function InfoBar({
 	details: SystemDetailsRecord | null
 }) {
 	const { t } = useLingui()
+	const showSensitiveDetails = getUserCapabilities().viewSensitiveDetails
 
 	// values for system info bar - use details with fallback to system.info
 	const systemInfo = useMemo(() => {
@@ -90,7 +92,7 @@ export default function InfoBar({
 		}
 
 		const info = [
-			{ value: getHostDisplayValue(system), Icon: GlobeIcon },
+			{ value: getHostDisplayValue(system), Icon: GlobeIcon, hide: !showSensitiveDetails },
 			{
 				value: hostname,
 				Icon: MonitorIcon,
@@ -124,7 +126,7 @@ export default function InfoBar({
 		}
 
 		return info
-	}, [system, details, t])
+	}, [system, details, t, showSensitiveDetails])
 
 	let translatedStatus: string = system.status
 	if (system.status === SystemStatus.Up) {

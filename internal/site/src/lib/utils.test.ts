@@ -1,4 +1,5 @@
 import { describe, test, expect, mock } from "bun:test"
+import type { SystemRecord } from "@/types"
 
 mock.module("@lingui/core/macro", () => ({
 	plural: (...args: unknown[]) => String(args[0]),
@@ -23,7 +24,13 @@ mock.module("@/lib/stores", () => ({
 	defaultLayoutWidth: 1440,
 }))
 
-const { compactMetricNumber, formatCompactWithUnit, formatProbeTooltipValue } = await import("./utils")
+const {
+	compactMetricNumber,
+	formatCompactWithUnit,
+	formatDirectionalTraffic,
+	formatProbeTooltipValue,
+	getHostDisplayValue,
+} = await import("./utils")
 
 describe("compactMetricNumber", () => {
 	test.each([
@@ -78,13 +85,13 @@ describe("compactMetricNumber", () => {
 
 describe("formatCompactWithUnit", () => {
 	test("zero value keeps unit", () => {
-		expect(formatCompactWithUnit(0, "KB/s")).toBe("0KB/s")
+		expect(formatCompactWithUnit(0, "KB/s")).toBe("0 KB/s")
 	})
 
 	test("normal values format correctly", () => {
-		expect(formatCompactWithUnit(12.34, "MB/s")).toBe("12.3MB/s")
-		expect(formatCompactWithUnit(1.234, "GB")).toBe("1.23GB")
-		expect(formatCompactWithUnit(123.4, "KB")).toBe("123KB")
+		expect(formatCompactWithUnit(12.34, "MB/s")).toBe("12.3 MB/s")
+		expect(formatCompactWithUnit(1.234, "GB")).toBe("1.23 GB")
+		expect(formatCompactWithUnit(123.4, "KB")).toBe("123 KB")
 	})
 
 	test("promotes byte unit when rounding exceeds 999", () => {
@@ -105,21 +112,33 @@ describe("formatCompactWithUnit", () => {
 		expect(result).not.toContain("1000")
 	})
 
-	test("1004 KB promotes to 0.98MB", () => {
-		expect(formatCompactWithUnit(1004, "KB")).toBe("0.98MB")
+	test("1004 KB promotes to 0.98 MB", () => {
+		expect(formatCompactWithUnit(1004, "KB")).toBe("0.98 MB")
 	})
 
 	test("repeatedly promotes very large values without a four-digit mantissa", () => {
-		expect(formatCompactWithUnit(1024 ** 2, "TB")).toBe("1.00EB")
-		expect(formatCompactWithUnit(1000 ** 2, "Tbps")).toBe("1.00Ebps")
+		expect(formatCompactWithUnit(1024 ** 2, "TB")).toBe("1.00 EB")
+		expect(formatCompactWithUnit(1000 ** 2, "Tbps")).toBe("1.00 Ebps")
 	})
 
 	test("NaN keeps unit", () => {
-		expect(formatCompactWithUnit(NaN, "MB/s")).toBe("0MB/s")
+		expect(formatCompactWithUnit(NaN, "MB/s")).toBe("0 MB/s")
 	})
 
 	test("unknown unit falls through without promotion", () => {
-		expect(formatCompactWithUnit(999.5, "??")).toBe("1000??")
+		expect(formatCompactWithUnit(999.5, "??")).toBe("1000 ??")
+	})
+})
+
+describe("formatDirectionalTraffic", () => {
+	test("spaces arrows, values, units, and separator", () => {
+		expect(formatDirectionalTraffic("16.3 MB/s", "11.6 MB/s")).toBe("↓ 16.3 MB/s | ↑ 11.6 MB/s")
+	})
+})
+
+describe("getHostDisplayValue", () => {
+	test("returns an empty value when readonly responses omit host", () => {
+		expect(getHostDisplayValue({ host: undefined } as unknown as SystemRecord)).toBe("")
 	})
 })
 

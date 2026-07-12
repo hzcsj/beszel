@@ -121,8 +121,18 @@ func (sm *SystemManager) bindEventHooks() {
 	sm.hub.OnRecordAfterUpdateSuccess("systems").BindFunc(sm.onRecordAfterUpdateSuccess)
 	sm.hub.OnRecordAfterDeleteSuccess("systems").BindFunc(sm.onRecordAfterDeleteSuccess)
 	sm.hub.OnRecordAfterUpdateSuccess("fingerprints").BindFunc(sm.onTokenRotated)
+	sm.hub.OnRecordEnrich("systems").BindFunc(sm.onRecordEnrich)
 	sm.hub.OnRealtimeSubscribeRequest().BindFunc(sm.onRealtimeSubscribeRequest)
 	sm.hub.OnRealtimeConnectRequest().BindFunc(sm.onRealtimeConnectRequest)
+}
+
+// onRecordEnrich prevents readonly clients from receiving connection
+// addresses through collection list, view, or realtime record responses.
+func (sm *SystemManager) onRecordEnrich(e *core.RecordEnrichEvent) error {
+	if e.RequestInfo != nil && e.RequestInfo.Auth != nil && e.RequestInfo.Auth.GetString("role") == "readonly" {
+		e.Record.Hide("host", "port")
+	}
+	return e.Next()
 }
 
 // onTokenRotated handles fingerprint token rotation events.

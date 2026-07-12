@@ -13,7 +13,13 @@ import Settings from "@/components/routes/settings/layout.tsx"
 import { ThemeProvider } from "@/components/theme-provider.tsx"
 import { Toaster } from "@/components/ui/toaster.tsx"
 import { alertManager } from "@/lib/alerts"
-import { isAdmin, pb, shouldInitializeAlertManager, shouldRedirectSettings, updateUserSettings } from "@/lib/api.ts"
+import {
+	isAdmin,
+	pb,
+	shouldInitializeAlertManager,
+	shouldRedirectReadOnlyRoute,
+	updateUserSettings,
+} from "@/lib/api.ts"
 import { dynamicActivate, getLocale } from "@/lib/i18n"
 import {
 	$authenticated,
@@ -74,7 +80,7 @@ const App = memo(() => {
 
 	if (!page) {
 		return <h1 className="text-3xl text-center my-14">404</h1>
-	} else if (shouldRedirectSettings(page.route)) {
+	} else if (shouldRedirectReadOnlyRoute(page.route)) {
 		redirectPage($router, "home")
 		return null
 	} else if (page.route === "home") {

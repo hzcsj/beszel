@@ -42,6 +42,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { SystemStatus } from "@/lib/enums"
+import { isReadOnlyUser } from "@/lib/api"
 import { $downSystems, $pausedSystems, $systems, $upSystems } from "@/lib/stores"
 import { cn, getHostDisplayValue, runOnce, useBrowserStorage } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip"
@@ -471,6 +472,25 @@ const SystemCard = memo(
 	({ row, table, colLength }: { row: Row<SystemRecord>; table: TableType<SystemRecord>; colLength: number }) => {
 		const system = row.original
 		const { t } = useLingui()
+		const readonly = isReadOnlyUser()
+		const systemLink = (
+			<Link
+				href={getPagePath($router, "system", { id: system.id })}
+				className="flex items-center gap-2.5 min-w-0 flex-1 relative z-10"
+			>
+				<IndicatorDot system={system} />
+				<span className="text-[.95em]/normal tracking-normal text-primary/90 truncate">
+					{system.name}
+					{!readonly && (
+						<span className="hidden @[26rem]:inline font-normal text-muted-foreground text-[.85em] ms-1 font-mono">
+							{"\uff08"}
+							{getHostDisplayValue(system)}
+							{"\uff09"}
+						</span>
+					)}
+				</span>
+			</Link>
+		)
 
 		return useMemo(() => {
 			return (
@@ -487,27 +507,16 @@ const SystemCard = memo(
 					<CardHeader className="py-1 ps-4 pe-2 bg-muted/30 border-b border-border/60 @container">
 						<div className="flex items-center gap-1 w-full overflow-hidden">
 							<h3 className="text-primary/90 min-w-0 flex-1 gap-2.5 font-semibold">
-								<Tooltip>
-									<TooltipTrigger asChild>
-										<Link
-											href={getPagePath($router, "system", { id: system.id })}
-											className="flex items-center gap-2.5 min-w-0 flex-1 relative z-10"
-										>
-											<IndicatorDot system={system} />
-											<span className="text-[.95em]/normal tracking-normal text-primary/90 truncate">
-												{system.name}
-												<span className="hidden @[26rem]:inline font-normal text-muted-foreground text-[.85em] ms-1 font-mono">
-													{"\uff08"}
-													{getHostDisplayValue(system)}
-													{"\uff09"}
-												</span>
-											</span>
-										</Link>
-									</TooltipTrigger>
-									<TooltipContent side="bottom" className="font-mono text-xs">
-										{getHostDisplayValue(system)}
-									</TooltipContent>
-								</Tooltip>
+								{readonly ? (
+									systemLink
+								) : (
+									<Tooltip>
+										<TooltipTrigger asChild>{systemLink}</TooltipTrigger>
+										<TooltipContent side="bottom" className="font-mono">
+											{getHostDisplayValue(system)}
+										</TooltipContent>
+									</Tooltip>
+								)}
 							</h3>
 							{table.getColumn("actions")?.getIsVisible() && (
 								<div className="flex gap-1 shrink-0 relative z-10">
@@ -554,6 +563,6 @@ const SystemCard = memo(
 					</Link>
 				</Card>
 			)
-		}, [system, colLength, t])
+		}, [system, colLength, t, readonly, systemLink])
 	}
 )

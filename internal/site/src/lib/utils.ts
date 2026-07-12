@@ -263,7 +263,7 @@ const unitPromotion: Record<string, { factor: number; next: string }> = {
 
 /** Format a metric value compactly with its unit, promoting the unit when rounding exceeds 999. */
 export function formatCompactWithUnit(value: number, unit: string): string {
-	if (value === 0 || !Number.isFinite(value)) return `0${unit}`
+	if (value === 0 || !Number.isFinite(value)) return `0 ${unit}`
 	const neg = value < 0
 	let abs = Math.abs(value)
 	let num = compactMetricNumber(abs)
@@ -277,7 +277,12 @@ export function formatCompactWithUnit(value: number, unit: string): string {
 		num = compactMetricNumber(abs)
 	}
 
-	return (neg ? "-" : "") + num + finalUnit
+	return `${neg ? "-" : ""}${num} ${finalUnit}`
+}
+
+/** Format paired download/upload traffic with readable directional spacing. */
+export function formatDirectionalTraffic(download: string, upload: string): string {
+	return `↓ ${download} | ↑ ${upload}`
 }
 
 /** Format probe tooltip value portion: "123ms 0.0%" or "--" for missing data. */
@@ -383,7 +388,8 @@ export const chartMargin = { top: 12, right: 5 }
  * // Assuming system.host is "/var/run/beszel.sock"
  * const hostname = getHostDisplayValue(system) // hostname will be "beszel.sock"
  */
-export const getHostDisplayValue = (system: SystemRecord): string => system.host.slice(system.host.lastIndexOf("/") + 1)
+export const getHostDisplayValue = (system: SystemRecord): string =>
+	system.host?.slice(system.host.lastIndexOf("/") + 1) ?? ""
 
 // export function formatUptimeString(uptimeSeconds: number): string {
 // 	if (!uptimeSeconds || isNaN(uptimeSeconds)) return ""

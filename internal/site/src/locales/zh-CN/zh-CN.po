@@ -574,8 +574,12 @@ msgid "Cycle Traffic"
 msgstr "周期流量"
 
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Cycle traffic: ↓{crxStr} / ↑{ctxStr}"
-msgstr "周期流量: ↓{crxStr} / ↑{ctxStr}"
+msgid "Cycle traffic: ↓ {crxStr} / ↑ {ctxStr}"
+msgstr "周期流量: ↓ {crxStr} / ↑ {ctxStr}"
+
+#: src/components/systems-table/systems-table-columns.tsx
+#~ msgid "Cycle traffic: ↓{crxStr} / ↑{ctxStr}"
+#~ msgstr "周期流量: ↓{crxStr} / ↑{ctxStr}"
 
 #. Power Cycles
 #: src/components/routes/system/smart-table.tsx
@@ -1448,7 +1452,13 @@ msgstr "读取"
 
 #: src/components/navbar.tsx
 #: src/components/navbar.tsx
-msgid "Read only"
+#: src/components/navbar.tsx
+#~ msgid "Read only"
+#~ msgstr "只读"
+
+#: src/components/navbar.tsx
+#: src/components/navbar.tsx
+msgid "Readonly"
 msgstr "只读"
 
 #: src/components/routes/system/charts/network-charts.tsx

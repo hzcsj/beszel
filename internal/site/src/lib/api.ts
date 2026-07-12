@@ -29,7 +29,8 @@ export function getUserCapabilities(): UserCapabilities {
 	}
 }
 
-export const shouldRedirectSettings = (route?: string) => route === "settings" && !getUserCapabilities().manageSettings
+export const shouldRedirectReadOnlyRoute = (route?: string) =>
+	isReadOnlyUser() && (route === "settings" || route === "containers" || route === "smart")
 
 export const shouldInitializeAlertManager = () => getUserCapabilities().manageAlerts
 

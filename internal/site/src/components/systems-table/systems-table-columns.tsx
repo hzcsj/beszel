@@ -33,6 +33,7 @@ import {
 	decimalString,
 	formatBytes,
 	formatCompactWithUnit,
+	formatDirectionalTraffic,
 	formatProbeTooltipValue,
 	formatTemperature,
 	getHostDisplayValue,
@@ -117,7 +118,7 @@ function billingModeLabel(mode: string): string {
  * @returns - Column definitions for the systems table
  */
 export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<SystemRecord>[] {
-	return [
+	const columns = [
 		{
 			size: 0,
 			minSize: 0,
@@ -138,7 +139,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 				// match filter value against name or translated status
 				return (row, _, newFilterInput) => {
 					const sys = row.original
-					if (sys.host.includes(newFilterInput) || sys.info.v?.includes(newFilterInput)) {
+					if (sys.host?.includes(newFilterInput) || sys.info.v?.includes(newFilterInput)) {
 						return true
 					}
 					if (newFilterInput !== filterInput) {
@@ -165,32 +166,38 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 				const { name, id } = system
 				const linkUrl = getPagePath($router, "system", { id })
 				const hostDisplay = getHostDisplayValue(system)
+				const readonly = isReadOnlyUser()
+				const nameLink = (
+					<Link
+						href={linkUrl}
+						className="truncate z-10 relative"
+						onMouseEnter={(e) => {
+							const a = e.currentTarget
+							if (a.scrollWidth > a.clientWidth) {
+								a.title = name
+							} else {
+								a.removeAttribute("title")
+							}
+						}}
+					>
+						{name}
+					</Link>
+				)
 
 				return (
 					<>
 						<span className="flex gap-2 items-center font-medium text-sm text-nowrap md:ps-1">
 							<IndicatorDot system={system} />
-							<Tooltip>
-								<TooltipTrigger asChild>
-									<Link
-										href={linkUrl}
-										className="truncate z-10 relative"
-										onMouseEnter={(e) => {
-											const a = e.currentTarget
-											if (a.scrollWidth > a.clientWidth) {
-												a.title = name
-											} else {
-												a.removeAttribute("title")
-											}
-										}}
-									>
-										{name}
-									</Link>
-								</TooltipTrigger>
-								<TooltipContent side="bottom" className="font-mono text-xs">
-									{hostDisplay}
-								</TooltipContent>
-							</Tooltip>
+							{readonly ? (
+								nameLink
+							) : (
+								<Tooltip>
+									<TooltipTrigger asChild>{nameLink}</TooltipTrigger>
+									<TooltipContent side="bottom" className="font-mono">
+										{hostDisplay}
+									</TooltipContent>
+								</Tooltip>
+							)}
 						</span>
 						<Link href={linkUrl} tabIndex={-1} className="inset-0 absolute size-full" aria-label={name} />
 					</>
@@ -298,7 +305,10 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 					const ul = formatBytes(sysInfo.nb[0], true, userSettings.unitNet, false)
 					return (
 						<span className="tabular-nums whitespace-nowrap">
-							↓{formatCompactWithUnit(dl.value, dl.unit)} | ↑{formatCompactWithUnit(ul.value, ul.unit)}
+							{formatDirectionalTraffic(
+								formatCompactWithUnit(dl.value, dl.unit),
+								formatCompactWithUnit(ul.value, ul.unit)
+							)}
 						</span>
 					)
 				}
@@ -370,7 +380,10 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 
 				const content = (
 					<span className={cn("tabular-nums whitespace-nowrap", warnClass)}>
-						↓{formatCompactWithUnit(rx.value, rx.unit)} | ↑{formatCompactWithUnit(tx.value, tx.unit)}
+						{formatDirectionalTraffic(
+							formatCompactWithUnit(rx.value, rx.unit),
+							formatCompactWithUnit(tx.value, tx.unit)
+						)}
 					</span>
 				)
 
@@ -382,7 +395,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 					<Tooltip>
 						<TooltipTrigger asChild>{content}</TooltipTrigger>
 						<TooltipContent side="bottom" className="max-w-xs">
-							<div className="grid gap-0.5 text-xs">
+							<div className="grid gap-0.5">
 								{tooltipLines.map((line, i) => (
 									<span key={i}>{line}</span>
 								))}
@@ -416,7 +429,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 				const ctx = formatBytes(vt.ctx ?? 0)
 				const crxStr = `${decimalString(crx.value, 2)} ${crx.unit}`
 				const ctxStr = `${decimalString(ctx.value, 2)} ${ctx.unit}`
-				tooltipLines.push(t`Cycle traffic: ↓${crxStr} / ↑${ctxStr}`)
+				tooltipLines.push(t`Cycle traffic: ↓ ${crxStr} / ↑ ${ctxStr}`)
 				if (vt.quota) {
 					const quotaPct = ((vt.bill ?? 0) / vt.quota) * 100
 					const q = formatBytes(vt.quota)
@@ -438,11 +451,14 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<span className="tabular-nums whitespace-nowrap">
-								↓{formatCompactWithUnit(rx.value, rx.unit)} | ↑{formatCompactWithUnit(tx.value, tx.unit)}
+								{formatDirectionalTraffic(
+									formatCompactWithUnit(rx.value, rx.unit),
+									formatCompactWithUnit(tx.value, tx.unit)
+								)}
 							</span>
 						</TooltipTrigger>
 						<TooltipContent side="bottom" className="max-w-xs">
-							<div className="grid gap-0.5 text-xs">
+							<div className="grid gap-0.5">
 								{tooltipLines.map((line, i) => (
 									<span key={i}>{line}</span>
 								))}
@@ -518,7 +534,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 							</button>
 						</TooltipTrigger>
 						<TooltipContent side="bottom" className="max-w-sm">
-							<div className="grid gap-1 text-xs font-mono">
+							<div className="grid gap-1 font-mono">
 								{resolved.map((rt) => {
 									const p = rt.stats
 									if (p.local) {
@@ -733,6 +749,8 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 			),
 		},
 	] as ColumnDef<SystemRecord>[]
+
+	return isReadOnlyUser() ? columns.filter((column) => column.id !== "actions") : columns
 }
 
 function sortableHeader(context: HeaderContext<SystemRecord, unknown>) {
@@ -910,10 +928,10 @@ function DiskCellWithMultiple(info: CellContext<SystemRecord, unknown>, viewMode
 			<TooltipContent side="right" className="max-w-xs pb-2">
 				<div className="grid gap-1">
 					<div className="grid gap-0.5">
-						<div className="text-[0.65rem] text-muted-foreground uppercase tracking-wide tabular-nums">
+						<div className="text-muted-foreground uppercase tracking-wide tabular-nums">
 							<Trans context="Root disk label">Root</Trans>
 						</div>
-						<div className="flex gap-2 items-center tabular-nums text-xs">
+						<div className="flex gap-2 items-center tabular-nums">
 							<span className="min-w-7">{decimalString(rootDiskPct, rootDiskPct >= 10 ? 1 : 2)}%</span>
 							<span className="flex-1 min-w-12 grid bg-muted h-2.5 rounded-sm overflow-hidden">
 								<span className={getMeterClass(rootDiskPct)} style={{ width: `${rootDiskPct}%` }}></span>
@@ -923,10 +941,8 @@ function DiskCellWithMultiple(info: CellContext<SystemRecord, unknown>, viewMode
 					{extraFs.map(([name, pct]) => {
 						return (
 							<div key={name} className="grid gap-0.5">
-								<div className="text-[0.65rem] max-w-40 text-muted-foreground uppercase tracking-wide truncate">
-									{name}
-								</div>
-								<div className="flex gap-2 items-center tabular-nums text-xs">
+								<div className="max-w-40 text-muted-foreground uppercase tracking-wide truncate">{name}</div>
+								<div className="flex gap-2 items-center tabular-nums">
 									<span className="min-w-7">{decimalString(pct, pct >= 10 ? 1 : 2)}%</span>
 									<span className="flex-1 min-w-12 grid bg-muted h-2.5 rounded-sm overflow-hidden">
 										<span className={getMeterClass(pct)} style={{ width: `${pct}%` }}></span>

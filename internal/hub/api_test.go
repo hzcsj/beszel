@@ -55,8 +55,9 @@ func TestApiRoutesAuthentication(t *testing.T) {
 	// Create test system
 	system, err := beszelTests.CreateRecord(hub, "systems", map[string]any{
 		"name":  "test-system",
-		"users": []string{user.Id},
+		"users": []string{user.Id, readOnlyUser.Id},
 		"host":  "127.0.0.1",
+		"port":  "45876",
 	})
 	require.NoError(t, err, "Failed to create test system")
 
@@ -65,6 +66,29 @@ func TestApiRoutesAuthentication(t *testing.T) {
 	}
 
 	scenarios := []beszelTests.ApiScenario{
+		{
+			Name:   "GET /systems - normal user receives connection address",
+			Method: http.MethodGet,
+			URL:    "/api/collections/systems/records",
+			Headers: map[string]string{
+				"Authorization": userToken,
+			},
+			ExpectedStatus:  200,
+			ExpectedContent: []string{`"host":"127.0.0.1"`, `"port":"45876"`},
+			TestAppFactory:  testAppFactory,
+		},
+		{
+			Name:   "GET /systems - readonly response redacts connection address",
+			Method: http.MethodGet,
+			URL:    "/api/collections/systems/records",
+			Headers: map[string]string{
+				"Authorization": readOnlyUserToken,
+			},
+			ExpectedStatus:     200,
+			ExpectedContent:    []string{`"name":"test-system"`},
+			NotExpectedContent: []string{`"host"`, `"port"`, "127.0.0.1", "45876"},
+			TestAppFactory:     testAppFactory,
+		},
 		// Auth Protected Routes - Should require authentication
 		{
 			Name:            "GET /config-yaml - no auth should fail",

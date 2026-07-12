@@ -126,7 +126,7 @@ const {
 	runIfSensitiveDetailsAllowed,
 	shouldInitializeAlertManager,
 	shouldShowProcessList,
-	shouldRedirectSettings,
+	shouldRedirectReadOnlyRoute,
 	updateUserSettings,
 } = await import("./api")
 const { saveSettings } = await import("@/components/routes/settings/layout")
@@ -213,13 +213,18 @@ describe("getUserCapabilities", () => {
 describe("readonly navigation and startup decisions", () => {
 	test("readonly settings route redirects", () => {
 		mockAuthStore.record = { role: "readonly" }
-		expect(shouldRedirectSettings("settings")).toBe(true)
-		expect(shouldRedirectSettings("home")).toBe(false)
+		expect(shouldRedirectReadOnlyRoute("settings")).toBe(true)
+		expect(shouldRedirectReadOnlyRoute("containers")).toBe(true)
+		expect(shouldRedirectReadOnlyRoute("smart")).toBe(true)
+		expect(shouldRedirectReadOnlyRoute("home")).toBe(false)
+		expect(shouldRedirectReadOnlyRoute("system")).toBe(false)
 	})
 
 	test("normal user settings route does not redirect", () => {
 		mockAuthStore.record = { role: "user" }
-		expect(shouldRedirectSettings("settings")).toBe(false)
+		expect(shouldRedirectReadOnlyRoute("settings")).toBe(false)
+		expect(shouldRedirectReadOnlyRoute("containers")).toBe(false)
+		expect(shouldRedirectReadOnlyRoute("smart")).toBe(false)
 	})
 
 	test("alert manager is disabled only for readonly users", () => {

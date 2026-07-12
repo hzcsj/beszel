@@ -569,8 +569,12 @@ msgid "Cycle Traffic"
 msgstr "Cycle Traffic"
 
 #: src/components/systems-table/systems-table-columns.tsx
-msgid "Cycle traffic: ↓{crxStr} / ↑{ctxStr}"
-msgstr "Cycle traffic: ↓{crxStr} / ↑{ctxStr}"
+msgid "Cycle traffic: ↓ {crxStr} / ↑ {ctxStr}"
+msgstr "Cycle traffic: ↓ {crxStr} / ↑ {ctxStr}"
+
+#: src/components/systems-table/systems-table-columns.tsx
+#~ msgid "Cycle traffic: ↓{crxStr} / ↑{ctxStr}"
+#~ msgstr "Cycle traffic: ↓{crxStr} / ↑{ctxStr}"
 
 #. Power Cycles
 #: src/components/routes/system/smart-table.tsx
@@ -1448,8 +1452,14 @@ msgstr "Read"
 
 #: src/components/navbar.tsx
 #: src/components/navbar.tsx
-msgid "Read only"
-msgstr "Read only"
+#: src/components/navbar.tsx
+#~ msgid "Read only"
+#~ msgstr "Read only"
+
+#: src/components/navbar.tsx
+#: src/components/navbar.tsx
+msgid "Readonly"
+msgstr "Readonly"
 
 #: src/components/routes/system/charts/network-charts.tsx
 msgid "Received"

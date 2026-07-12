@@ -84,70 +84,76 @@ export default function Navbar() {
 
 			{/* mobile menu */}
 			<div className="ms-auto flex items-center text-xl md:hidden">
-				<ModeToggle />
-				<Button variant="ghost" size="icon" onClick={() => setCommandPaletteOpen(true)}>
-					<SearchIcon className="h-[1.2rem] w-[1.2rem]" />
-				</Button>
-				<DropdownMenu>
-					<DropdownMenuTrigger
-						onMouseEnter={() => import("@/components/routes/settings/general")}
-						className="ms-3"
-						aria-label="Open Menu"
-					>
-						<MenuIcon />
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end">
-						<DropdownMenuLabel className="max-w-40 truncate">{pb.authStore.record?.email}</DropdownMenuLabel>
-						{readonly && (
-							<DropdownMenuLabel className="pt-0 text-xs text-muted-foreground font-normal">
-								<Trans>Read only</Trans>
-							</DropdownMenuLabel>
-						)}
-						<DropdownMenuSeparator />
-						<DropdownMenuGroup>
-							<DropdownMenuItem
-								onClick={() => navigate(getPagePath($router, "containers"))}
-								className="flex items-center"
+				{readonly ? (
+					<>
+						<LangToggle />
+						<ModeToggle />
+						<span className="text-sm whitespace-nowrap text-muted-foreground bg-muted px-2 py-1 rounded ms-1">
+							<Trans>Readonly</Trans>
+						</span>
+					</>
+				) : (
+					<>
+						<ModeToggle />
+						<Button variant="ghost" size="icon" onClick={() => setCommandPaletteOpen(true)}>
+							<SearchIcon className="h-[1.2rem] w-[1.2rem]" />
+						</Button>
+						<DropdownMenu>
+							<DropdownMenuTrigger
+								onMouseEnter={() => import("@/components/routes/settings/general")}
+								className="ms-3"
+								aria-label="Open Menu"
 							>
-								<ContainerIcon className="h-4 w-4 me-2.5" strokeWidth={1.5} />
-								<Trans>All Containers</Trans>
-							</DropdownMenuItem>
-							<DropdownMenuItem onClick={() => navigate(getPagePath($router, "smart"))} className="flex items-center">
-								<HardDriveIcon className="h-4 w-4 me-2.5" strokeWidth={1.5} />
-								<span>S.M.A.R.T.</span>
-							</DropdownMenuItem>
-							{capabilities.manageSettings && (
-								<DropdownMenuItem
-									onClick={() => navigate(getPagePath($router, "settings", { name: "general" }))}
-									className="flex items-center"
-								>
-									<SettingsIcon className="h-4 w-4 me-2.5" />
-									<Trans>Settings</Trans>
-								</DropdownMenuItem>
-							)}
-							{isAdmin() && (
-								<DropdownMenuSub>
-									<DropdownMenuSubTrigger>
-										<UserIcon className="h-4 w-4 me-2.5" />
-										<Trans>Admin</Trans>
-									</DropdownMenuSubTrigger>
-									<DropdownMenuSubContent>{AdminLinks}</DropdownMenuSubContent>
-								</DropdownMenuSub>
-							)}
-							{capabilities.manageSystems && (
-								<DropdownMenuItem
-									className="flex items-center"
-									onSelect={() => {
-										setAddSystemDialogOpen(true)
-									}}
-								>
-									<PlusIcon className="h-4 w-4 me-2.5" />
-									<Trans>Add {{ foo: systemTranslation }}</Trans>
-								</DropdownMenuItem>
-							)}
-						</DropdownMenuGroup>
-						{!readonly && (
-							<>
+								<MenuIcon />
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								<DropdownMenuLabel className="max-w-40 truncate">{pb.authStore.record?.email}</DropdownMenuLabel>
+								<DropdownMenuSeparator />
+								<DropdownMenuGroup>
+									<DropdownMenuItem
+										onClick={() => navigate(getPagePath($router, "containers"))}
+										className="flex items-center"
+									>
+										<ContainerIcon className="h-4 w-4 me-2.5" strokeWidth={1.5} />
+										<Trans>All Containers</Trans>
+									</DropdownMenuItem>
+									<DropdownMenuItem
+										onClick={() => navigate(getPagePath($router, "smart"))}
+										className="flex items-center"
+									>
+										<HardDriveIcon className="h-4 w-4 me-2.5" strokeWidth={1.5} />
+										<span>S.M.A.R.T.</span>
+									</DropdownMenuItem>
+									{capabilities.manageSettings && (
+										<DropdownMenuItem
+											onClick={() => navigate(getPagePath($router, "settings", { name: "general" }))}
+											className="flex items-center"
+										>
+											<SettingsIcon className="h-4 w-4 me-2.5" />
+											<Trans>Settings</Trans>
+										</DropdownMenuItem>
+									)}
+									{isAdmin() && (
+										<DropdownMenuSub>
+											<DropdownMenuSubTrigger>
+												<UserIcon className="h-4 w-4 me-2.5" />
+												<Trans>Admin</Trans>
+											</DropdownMenuSubTrigger>
+											<DropdownMenuSubContent>{AdminLinks}</DropdownMenuSubContent>
+										</DropdownMenuSub>
+									)}
+									{capabilities.manageSystems && (
+										<DropdownMenuItem
+											className="flex items-center"
+											onSelect={() => {
+												setAddSystemDialogOpen(true)
+											}}
+										>
+											<PlusIcon className="h-4 w-4 me-2.5" />
+											<Trans>Add {{ foo: systemTranslation }}</Trans>
+										</DropdownMenuItem>
+									)}
+								</DropdownMenuGroup>
 								<DropdownMenuSeparator />
 								<DropdownMenuGroup>
 									<DropdownMenuItem onSelect={logOut} className="flex items-center">
@@ -155,10 +161,10 @@ export default function Navbar() {
 										<Trans>Log Out</Trans>
 									</DropdownMenuItem>
 								</DropdownMenuGroup>
-							</>
-						)}
-					</DropdownMenuContent>
-				</DropdownMenu>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</>
+				)}
 			</div>
 
 			{/* desktop nav */}
@@ -167,32 +173,36 @@ export default function Navbar() {
 				className="hidden md:flex items-center ms-auto"
 				onMouseEnter={() => import("@/components/routes/settings/general")}
 			>
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<Link
-							href={getPagePath($router, "containers")}
-							className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
-							aria-label="Containers"
-						>
-							<ContainerIcon className="h-[1.2rem] w-[1.2rem]" strokeWidth={1.5} />
-						</Link>
-					</TooltipTrigger>
-					<TooltipContent>
-						<Trans>All Containers</Trans>
-					</TooltipContent>
-				</Tooltip>
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<Link
-							href={getPagePath($router, "smart")}
-							className={cn("hidden md:grid", buttonVariants({ variant: "ghost", size: "icon" }))}
-							aria-label="S.M.A.R.T."
-						>
-							<HardDriveIcon className="h-[1.2rem] w-[1.2rem]" strokeWidth={1.5} />
-						</Link>
-					</TooltipTrigger>
-					<TooltipContent>S.M.A.R.T.</TooltipContent>
-				</Tooltip>
+				{!readonly && (
+					<>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Link
+									href={getPagePath($router, "containers")}
+									className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
+									aria-label="Containers"
+								>
+									<ContainerIcon className="h-[1.2rem] w-[1.2rem]" strokeWidth={1.5} />
+								</Link>
+							</TooltipTrigger>
+							<TooltipContent>
+								<Trans>All Containers</Trans>
+							</TooltipContent>
+						</Tooltip>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Link
+									href={getPagePath($router, "smart")}
+									className={cn("hidden md:grid", buttonVariants({ variant: "ghost", size: "icon" }))}
+									aria-label="S.M.A.R.T."
+								>
+									<HardDriveIcon className="h-[1.2rem] w-[1.2rem]" strokeWidth={1.5} />
+								</Link>
+							</TooltipTrigger>
+							<TooltipContent>S.M.A.R.T.</TooltipContent>
+						</Tooltip>
+					</>
+				)}
 				<LangToggle />
 				<ModeToggle />
 				{capabilities.manageSettings && (
@@ -212,8 +222,8 @@ export default function Navbar() {
 					</Tooltip>
 				)}
 				{readonly ? (
-					<span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded ms-1">
-						<Trans>Read only</Trans>
+					<span className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded ms-1">
+						<Trans>Readonly</Trans>
 					</span>
 				) : (
 					<DropdownMenu>
