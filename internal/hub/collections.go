@@ -67,6 +67,7 @@ func setCollectionAuthSettings(app core.App) error {
 	}
 	systemsWriteRule := systemsReadRule + " && @request.auth.role != \"readonly\""
 	systemScopedWriteRule := systemScopedReadRule + " && @request.auth.role != \"readonly\""
+	systemScopedSensitiveReadRule := systemScopedWriteRule
 
 	if err := applyCollectionRules(app, []string{"systems"}, collectionRules{
 		list:   &systemsReadRule,
@@ -78,15 +79,21 @@ func setCollectionAuthSettings(app core.App) error {
 		return err
 	}
 
-	if err := applyCollectionRules(app, []string{"containers", "container_stats", "system_stats", "systemd_services"}, collectionRules{
+	if err := applyCollectionRules(app, []string{"system_stats"}, collectionRules{
 		list: &systemScopedReadRule,
 	}); err != nil {
 		return err
 	}
 
+	if err := applyCollectionRules(app, []string{"containers", "container_stats", "systemd_services"}, collectionRules{
+		list: &systemScopedSensitiveReadRule,
+	}); err != nil {
+		return err
+	}
+
 	if err := applyCollectionRules(app, []string{"smart_devices"}, collectionRules{
-		list:   &systemScopedReadRule,
-		view:   &systemScopedReadRule,
+		list:   &systemScopedSensitiveReadRule,
+		view:   &systemScopedSensitiveReadRule,
 		delete: &systemScopedWriteRule,
 	}); err != nil {
 		return err

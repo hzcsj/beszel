@@ -176,8 +176,8 @@ msgstr "所有容器"
 #: src/components/routes/settings/quiet-hours.tsx
 #: src/components/systems-table/systems-table.tsx
 #: src/components/systems-table/systems-table.tsx
-msgid "All Systems"
-msgstr "所有客户端"
+msgid "All Nodes"
+msgstr "所有节点"
 
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Are you sure you want to delete {name}?"
@@ -1034,7 +1034,7 @@ msgstr "生命周期"
 msgid "limit"
 msgstr "限制"
 
-#. Short label for load average in All Systems list
+#. Short label for load average in All Nodes list
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Load"
 msgstr "负载"

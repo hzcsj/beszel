@@ -88,6 +88,9 @@ func (sm *SystemManager) authorizeCustomSubscription(app core.App, auth *core.Re
 	if auth == nil {
 		return fmt.Errorf("unauthorized")
 	}
+	if strings.HasPrefix(subscription, "rt_metrics") && auth.GetString("role") == "readonly" {
+		return fmt.Errorf("forbidden: readonly users cannot access detailed realtime metrics")
+	}
 	systemId := parseRealtimeSystemID(subscription)
 	if systemId == "" {
 		return fmt.Errorf("missing or malformed system parameter")

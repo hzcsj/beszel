@@ -30,7 +30,8 @@ This public fork adds an operations-focused VPS dashboard on top of Beszel:
 - Ordered dynamic TCP probes: every Agent declares zero to four stable targets with custom IDs, labels, addresses, and optional local targets.
 - Compact loss-colored probe latency in the systems list and a dynamic dual-axis latency/loss detail chart.
 - Stable custom system ordering, a privacy-preserving readonly role, and English / Simplified Chinese UI builds.
-- Readonly dashboards redact host addresses and remove global container, SMART, and system-action navigation.
+- Readonly dashboards redact host addresses and deny container, SMART, and systemd detail data in both UI and API.
+- List network rates color download and upload independently at MB/s and GB/s thresholds while preserving the selected display unit.
 - Versioned GitHub Releases containing immutable Linux amd64 Hub and Agent binaries for pilot and production rollout.
 
 See the [V7 dynamic probe specification](spec/beszel-vps-dashboard-v7-dynamic-probes-order-tooltip.md) for the Agent configuration contract and compatibility behavior.

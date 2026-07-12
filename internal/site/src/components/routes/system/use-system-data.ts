@@ -3,7 +3,7 @@ import { getPagePath } from "@nanostores/router"
 import { subscribeKeys } from "nanostores"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useContainerChartConfigs } from "@/components/charts/hooks"
-import { pb } from "@/lib/api"
+import { getUserCapabilities, pb } from "@/lib/api"
 import { SystemStatus } from "@/lib/enums"
 import {
 	$allSystemsById,
@@ -31,6 +31,7 @@ import { appendData, cache, getStats, getTimeData, makeContainerData, makeContai
 export type SystemData = ReturnType<typeof useSystemData>
 
 export function useSystemData(id: string) {
+	const canViewSensitiveDetails = getUserCapabilities().viewSensitiveDetails
 	const direction = useStore($direction)
 	const systems = useStore($systems)
 	const chartTime = useStore($chartTime)
@@ -111,6 +112,10 @@ export function useSystemData(id: string) {
 		if (!system.id || chartTime !== "1m") {
 			return
 		}
+		if (!canViewSensitiveDetails) {
+			$chartTime.set("1h")
+			return
+		}
 		if (system.status !== SystemStatus.Up || parseSemVer(system?.info?.v).minor < 13) {
 			$chartTime.set("1h")
 			return
@@ -146,7 +151,7 @@ export function useSystemData(id: string) {
 		return () => {
 			unsub?.()
 		}
-	}, [chartTime, system.id])
+	}, [canViewSensitiveDetails, chartTime, system.id])
 
 	const agentVersion = useMemo(() => parseSemVer(system?.info?.v), [system?.info?.v])
 
@@ -182,7 +187,9 @@ export function useSystemData(id: string) {
 		const requestId = ++statsRequestId.current
 
 		const cachedSystemStats = cache.get(ss_cache_key) as SystemStatsRecord[] | undefined
-		const cachedContainerData = cache.get(cs_cache_key) as ChartData["containerData"] | undefined
+		const cachedContainerData = canViewSensitiveDetails
+			? (cache.get(cs_cache_key) as ChartData["containerData"] | undefined)
+			: undefined
 
 		// Render from cache immediately if available
 		if (cachedSystemStats?.length) {
@@ -201,7 +208,9 @@ export function useSystemData(id: string) {
 
 		Promise.allSettled([
 			getStats<SystemStatsRecord>("system_stats", systemId, chartTime),
-			getStats<ContainerStatsRecord>("container_stats", systemId, chartTime),
+			canViewSensitiveDetails
+				? getStats<ContainerStatsRecord>("container_stats", systemId, chartTime)
+				: Promise.resolve([] as ContainerStatsRecord[]),
 		]).then(([systemStats, containerStats]) => {
 			// If another request has been made since this one, ignore the results
 			if (requestId !== statsRequestId.current) {
@@ -218,14 +227,14 @@ export function useSystemData(id: string) {
 			}
 			setSystemStats(systemData)
 			// make new container stats
-			let containerData = (cache.get(cs_cache_key) || []) as ChartData["containerData"]
+			let containerData = canViewSensitiveDetails ? ((cache.get(cs_cache_key) || []) as ChartData["containerData"]) : []
 			if (containerStats.status === "fulfilled" && containerStats.value.length) {
 				containerData = appendData(containerData, makeContainerData(containerStats.value), expectedInterval, 100)
 				cache.set(cs_cache_key, containerData)
 			}
 			setContainerData(containerData)
 		})
-	}, [system, chartTime])
+	}, [canViewSensitiveDetails, system, chartTime])
 
 	// keyboard navigation between systems
 	// in tabs mode: arrow keys switch tabs, shift+arrow switches systems

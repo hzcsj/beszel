@@ -64,7 +64,7 @@ func TestCollectionRulesDefault(t *testing.T) {
 	// containers collection
 	containersCollection, err := hub.FindCollectionByNameOrId("containers")
 	require.NoError(t, err, "Failed to find containers collection")
-	assert.Equal(t, isUserInSystemUsers, *containersCollection.ListRule)
+	assert.Equal(t, isUserInSystemUsersNotReadonly, *containersCollection.ListRule)
 	assert.Nil(t, containersCollection.ViewRule)
 	assert.Nil(t, containersCollection.CreateRule)
 	assert.Nil(t, containersCollection.UpdateRule)
@@ -73,7 +73,7 @@ func TestCollectionRulesDefault(t *testing.T) {
 	// container_stats collection
 	containerStatsCollection, err := hub.FindCollectionByNameOrId("container_stats")
 	require.NoError(t, err, "Failed to find container_stats collection")
-	assert.Equal(t, isUserInSystemUsers, *containerStatsCollection.ListRule)
+	assert.Equal(t, isUserInSystemUsersNotReadonly, *containerStatsCollection.ListRule)
 	assert.Nil(t, containerStatsCollection.ViewRule)
 	assert.Nil(t, containerStatsCollection.CreateRule)
 	assert.Nil(t, containerStatsCollection.UpdateRule)
@@ -100,8 +100,8 @@ func TestCollectionRulesDefault(t *testing.T) {
 	// smart_devices collection
 	smartDevicesCollection, err := hub.FindCollectionByNameOrId("smart_devices")
 	require.NoError(t, err, "Failed to find smart_devices collection")
-	assert.Equal(t, isUserInSystemUsers, *smartDevicesCollection.ListRule)
-	assert.Equal(t, isUserInSystemUsers, *smartDevicesCollection.ViewRule)
+	assert.Equal(t, isUserInSystemUsersNotReadonly, *smartDevicesCollection.ListRule)
+	assert.Equal(t, isUserInSystemUsersNotReadonly, *smartDevicesCollection.ViewRule)
 	assert.Nil(t, smartDevicesCollection.CreateRule)
 	assert.Nil(t, smartDevicesCollection.UpdateRule)
 	assert.Equal(t, isUserInSystemUsersNotReadonly, *smartDevicesCollection.DeleteRule)
@@ -127,7 +127,7 @@ func TestCollectionRulesDefault(t *testing.T) {
 	// systemd_services collection
 	systemdServicesCollection, err := hub.FindCollectionByNameOrId("systemd_services")
 	require.NoError(t, err, "Failed to find systemd_services collection")
-	assert.Equal(t, isUserInSystemUsers, *systemdServicesCollection.ListRule)
+	assert.Equal(t, isUserInSystemUsersNotReadonly, *systemdServicesCollection.ListRule)
 	assert.Nil(t, systemdServicesCollection.ViewRule)
 	assert.Nil(t, systemdServicesCollection.CreateRule)
 	assert.Nil(t, systemdServicesCollection.UpdateRule)
@@ -193,7 +193,7 @@ func TestCollectionRulesShareAllSystems(t *testing.T) {
 	// containers collection
 	containersCollection, err := hub.FindCollectionByNameOrId("containers")
 	require.NoError(t, err, "Failed to find containers collection")
-	assert.Equal(t, isUser, *containersCollection.ListRule)
+	assert.Equal(t, isUserNotReadonly, *containersCollection.ListRule)
 	assert.Nil(t, containersCollection.ViewRule)
 	assert.Nil(t, containersCollection.CreateRule)
 	assert.Nil(t, containersCollection.UpdateRule)
@@ -202,7 +202,7 @@ func TestCollectionRulesShareAllSystems(t *testing.T) {
 	// container_stats collection
 	containerStatsCollection, err := hub.FindCollectionByNameOrId("container_stats")
 	require.NoError(t, err, "Failed to find container_stats collection")
-	assert.Equal(t, isUser, *containerStatsCollection.ListRule)
+	assert.Equal(t, isUserNotReadonly, *containerStatsCollection.ListRule)
 	assert.Nil(t, containerStatsCollection.ViewRule)
 	assert.Nil(t, containerStatsCollection.CreateRule)
 	assert.Nil(t, containerStatsCollection.UpdateRule)
@@ -229,8 +229,8 @@ func TestCollectionRulesShareAllSystems(t *testing.T) {
 	// smart_devices collection
 	smartDevicesCollection, err := hub.FindCollectionByNameOrId("smart_devices")
 	require.NoError(t, err, "Failed to find smart_devices collection")
-	assert.Equal(t, isUser, *smartDevicesCollection.ListRule)
-	assert.Equal(t, isUser, *smartDevicesCollection.ViewRule)
+	assert.Equal(t, isUserNotReadonly, *smartDevicesCollection.ListRule)
+	assert.Equal(t, isUserNotReadonly, *smartDevicesCollection.ViewRule)
 	assert.Nil(t, smartDevicesCollection.CreateRule)
 	assert.Nil(t, smartDevicesCollection.UpdateRule)
 	assert.Equal(t, isUserNotReadonly, *smartDevicesCollection.DeleteRule)
@@ -256,7 +256,7 @@ func TestCollectionRulesShareAllSystems(t *testing.T) {
 	// systemd_services collection
 	systemdServicesCollection, err := hub.FindCollectionByNameOrId("systemd_services")
 	require.NoError(t, err, "Failed to find systemd_services collection")
-	assert.Equal(t, isUser, *systemdServicesCollection.ListRule)
+	assert.Equal(t, isUserNotReadonly, *systemdServicesCollection.ListRule)
 	assert.Nil(t, systemdServicesCollection.ViewRule)
 	assert.Nil(t, systemdServicesCollection.CreateRule)
 	assert.Nil(t, systemdServicesCollection.UpdateRule)

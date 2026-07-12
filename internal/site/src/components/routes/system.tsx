@@ -18,7 +18,7 @@ import { ContainerIcon, CpuIcon, HardDriveIcon, TerminalSquareIcon } from "lucid
 import { GpuIcon } from "../ui/icons"
 import SystemdTable from "../systemd-table/systemd-table"
 import ContainersTable from "../containers-table/containers-table"
-import { shouldShowProcessList } from "@/lib/api"
+import { getUserCapabilities } from "@/lib/api"
 
 const SEMVER_0_14_0 = parseSemVer("0.14.0")
 const SEMVER_0_15_0 = parseSemVer("0.15.0")
@@ -60,10 +60,11 @@ export default memo(function SystemDetail({ id }: { id: string }) {
 		return null
 	}
 
-	const hasContainers = containerData.length > 0
-	const maybeHasSmartData = compareSemVer(chartData.agentVersion, SEMVER_0_15_0) >= 0
+	const canViewSensitiveDetails = getUserCapabilities().viewSensitiveDetails
+	const hasContainers = canViewSensitiveDetails && containerData.length > 0
+	const maybeHasSmartData = canViewSensitiveDetails && compareSemVer(chartData.agentVersion, SEMVER_0_15_0) >= 0
 	const hasContainersTable = hasContainers && compareSemVer(chartData.agentVersion, SEMVER_0_14_0) >= 0
-	const hasSystemd = Boolean(system.info.sv) && shouldShowProcessList()
+	const hasSystemd = canViewSensitiveDetails && Boolean(system.info.sv)
 	const hasGpu = hasGpuData || hasGpuPowerData
 
 	// keep tabsRef in sync for keyboard navigation

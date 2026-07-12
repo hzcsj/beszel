@@ -45,7 +45,7 @@ export default memo(function CommandPalette({ open, setOpen }: { open: boolean; 
 
 	return useMemo(() => {
 		const systems = $systems.get()
-		const { manageSettings } = getUserCapabilities()
+		const { manageSettings, viewSensitiveDetails } = getUserCapabilities()
 		const SettingsShortcut = (
 			<CommandShortcut>
 				<Trans>Settings</Trans>
@@ -91,38 +91,42 @@ export default memo(function CommandPalette({ open, setOpen }: { open: boolean; 
 						>
 							<ServerIcon className="me-2 size-4" />
 							<span>
-								<Trans>All Systems</Trans>
+								<Trans>All Nodes</Trans>
 							</span>
 							<CommandShortcut>
 								<Trans>Page</Trans>
 							</CommandShortcut>
 						</CommandItem>
-						<CommandItem
-							onSelect={() => {
-								navigate(getPagePath($router, "containers"))
-								setOpen(false)
-							}}
-						>
-							<ContainerIcon className="me-2 size-4" />
-							<span>
-								<Trans>All Containers</Trans>
-							</span>
-							<CommandShortcut>
-								<Trans>Page</Trans>
-							</CommandShortcut>
-						</CommandItem>
-						<CommandItem
-							onSelect={() => {
-								navigate(getPagePath($router, "smart"))
-								setOpen(false)
-							}}
-						>
-							<HardDriveIcon className="me-2 size-4" />
-							<span>S.M.A.R.T.</span>
-							<CommandShortcut>
-								<Trans>Page</Trans>
-							</CommandShortcut>
-						</CommandItem>
+						{viewSensitiveDetails && (
+							<>
+								<CommandItem
+									onSelect={() => {
+										navigate(getPagePath($router, "containers"))
+										setOpen(false)
+									}}
+								>
+									<ContainerIcon className="me-2 size-4" />
+									<span>
+										<Trans>All Containers</Trans>
+									</span>
+									<CommandShortcut>
+										<Trans>Page</Trans>
+									</CommandShortcut>
+								</CommandItem>
+								<CommandItem
+									onSelect={() => {
+										navigate(getPagePath($router, "smart"))
+										setOpen(false)
+									}}
+								>
+									<HardDriveIcon className="me-2 size-4" />
+									<span>S.M.A.R.T.</span>
+									<CommandShortcut>
+										<Trans>Page</Trans>
+									</CommandShortcut>
+								</CommandItem>
+							</>
+						)}
 						{manageSettings && (
 							<>
 								<CommandItem

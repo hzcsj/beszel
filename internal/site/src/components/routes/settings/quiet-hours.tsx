@@ -221,7 +221,7 @@ export function QuietHours() {
 							{data.map((record) => (
 								<TableRow key={record.id}>
 									<TableCell className="px-4 py-3">
-										{record.system ? record.expand?.system?.name || record.system : <Trans>All Systems</Trans>}
+										{record.system ? record.expand?.system?.name || record.system : <Trans>All Nodes</Trans>}
 									</TableCell>
 									<TableCell className="px-4 py-3">
 										{record.type === "daily" ? <Trans>Daily</Trans> : <Trans>One-time</Trans>}

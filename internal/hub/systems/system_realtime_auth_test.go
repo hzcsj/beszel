@@ -137,6 +137,9 @@ func TestRealtimeAuthReadonlyWithShareAll(t *testing.T) {
 
 	err = sm.TestRealtimeAuth(hub, roUser, sdkTopic("rt_systems", sys.Id))
 	assert.NoError(t, err, "readonly with SHARE_ALL_SYSTEMS should be allowed")
+
+	err = sm.TestRealtimeAuth(hub, roUser, sdkTopic("rt_metrics", sys.Id))
+	assert.Error(t, err, "readonly detailed realtime metrics should be rejected")
 }
 
 func TestRealtimeAuthMissingSystemParam(t *testing.T) {

@@ -118,7 +118,11 @@ export default function SystemsTable() {
 		}
 	}, [filter])
 
-	const columnDefs = useMemo(() => SystemsTableColumns(viewMode), [viewMode])
+	const readonly = isReadOnlyUser()
+	const columnDefs = useMemo(
+		() => SystemsTableColumns(viewMode).filter((column) => !readonly || column.id !== "services"),
+		[viewMode, readonly]
+	)
 
 	const table = useReactTable({
 		data: filteredData,
@@ -157,7 +161,7 @@ export default function SystemsTable() {
 				<div className="grid md:flex gap-x-5 gap-y-3 w-full items-end">
 					<div className="px-2 sm:px-1">
 						<CardTitle className="mb-2">
-							<Trans>All Systems</Trans>
+							<Trans>All Nodes</Trans>
 						</CardTitle>
 						<CardDescription className="flex">
 							<Trans>Click on a system to view more information.</Trans>
@@ -228,7 +232,7 @@ export default function SystemsTable() {
 											onValueChange={(value) => setStatusFilter(value as StatusFilter)}
 										>
 											<DropdownMenuRadioItem value="all" onSelect={(e) => e.preventDefault()}>
-												<Trans>All Systems</Trans>
+												<Trans>All Nodes</Trans>
 											</DropdownMenuRadioItem>
 											<DropdownMenuRadioItem value="up" onSelect={(e) => e.preventDefault()}>
 												<Trans>Up ({upSystemsLength})</Trans>

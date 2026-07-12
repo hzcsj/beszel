@@ -42,6 +42,7 @@ import {
 } from "@/lib/utils"
 import { getCycleTrafficColorClass, calculateCycleProgressPct } from "@/lib/traffic-billing"
 import { formatLoad } from "@/lib/format-load"
+import { getDirectionalNetworkRateColorClasses, getNetworkRateColorClass } from "@/lib/network-rate"
 import { batteryStateTranslations } from "@/lib/i18n"
 import type { SystemRecord } from "@/types"
 import { compareSystemsByOrder } from "@/lib/system-order"
@@ -248,7 +249,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 		{
 			id: "loadAverage",
 			accessorFn: ({ info }) => info.la?.[0],
-			name: () => t({ message: "Load", comment: "Short label for load average in All Systems list" }),
+			name: () => t({ message: "Load", comment: "Short label for load average in All Nodes list" }),
 			size: 0,
 			Icon: HourglassIcon,
 			header: sortableHeader,
@@ -301,14 +302,16 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 				const userSettings = useStore($userSettings, { keys: ["unitNet"] })
 
 				if (sysInfo.nb) {
-					const dl = formatBytes(sysInfo.nb[1], true, userSettings.unitNet, false)
-					const ul = formatBytes(sysInfo.nb[0], true, userSettings.unitNet, false)
+					const downloadBytes = sysInfo.nb[1]
+					const uploadBytes = sysInfo.nb[0]
+					const dl = formatBytes(downloadBytes, true, userSettings.unitNet, false)
+					const ul = formatBytes(uploadBytes, true, userSettings.unitNet, false)
+					const colors = getDirectionalNetworkRateColorClasses(downloadBytes, uploadBytes)
 					return (
 						<span className="tabular-nums whitespace-nowrap">
-							{formatDirectionalTraffic(
-								formatCompactWithUnit(dl.value, dl.unit),
-								formatCompactWithUnit(ul.value, ul.unit)
-							)}
+							<span className={colors.download}>↓ {formatCompactWithUnit(dl.value, dl.unit)}</span>
+							<span className="text-muted-foreground"> | </span>
+							<span className={colors.upload}>↑ {formatCompactWithUnit(ul.value, ul.unit)}</span>
 						</span>
 					)
 				}
@@ -317,7 +320,7 @@ export function SystemsTableColumns(viewMode: "table" | "grid"): ColumnDef<Syste
 				if (bb === undefined) return null
 				const { value, unit } = formatBytes(bb, true, userSettings.unitNet, false)
 				return (
-					<span className="tabular-nums whitespace-nowrap text-muted-foreground">
+					<span className={cn("tabular-nums whitespace-nowrap text-muted-foreground", getNetworkRateColorClass(bb))}>
 						{formatCompactWithUnit(value, unit)}
 					</span>
 				)

@@ -6,7 +6,7 @@ function roundHalfUp(num: number, decimals: number): number {
 }
 
 /**
- * Magnitude-aware compact load formatter for All Systems list.
+ * Magnitude-aware compact load formatter for All Nodes list.
  * Rounds first (half-up), then picks format bracket based on the rounded value.
  *
  * 0 -> 0.00, 0.004 -> 0.00, 9.995 -> 10.0, 99.95 -> 100, 123.4 -> 123

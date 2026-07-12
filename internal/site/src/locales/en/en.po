@@ -171,8 +171,8 @@ msgstr "All Containers"
 #: src/components/routes/settings/quiet-hours.tsx
 #: src/components/systems-table/systems-table.tsx
 #: src/components/systems-table/systems-table.tsx
-msgid "All Systems"
-msgstr "All Systems"
+msgid "All Nodes"
+msgstr "All Nodes"
 
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Are you sure you want to delete {name}?"
@@ -1029,7 +1029,7 @@ msgstr "Lifecycle"
 msgid "limit"
 msgstr "limit"
 
-#. Short label for load average in All Systems list
+#. Short label for load average in All Nodes list
 #: src/components/systems-table/systems-table-columns.tsx
 msgid "Load"
 msgstr "Load"
