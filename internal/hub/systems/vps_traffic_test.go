@@ -149,23 +149,24 @@ func TestCounterReset(t *testing.T) {
 	ni2 := map[string][4]uint64{"eth0": {0, 0, 1_500_000, 2_500_000}}
 	m.DeriveTraffic("sys1", "node1", nil, ni2, true)
 
-	// simulate reboot: counters drop
+	// Simulate reboot: the first lower sample is held until a second sample
+	// confirms that the counters are growing from a real reset.
 	ni3 := map[string][4]uint64{"eth0": {0, 0, 50_000, 30_000}}
-	info := m.DeriveTraffic("sys1", "node1", nil, ni3, true)
+	m.DeriveTraffic("sys1", "node1", nil, ni3, true)
+	ni4 := map[string][4]uint64{"eth0": {0, 0, 60_000, 40_000}}
+	info := m.DeriveTraffic("sys1", "node1", nil, ni4, true)
 	if info == nil {
 		t.Fatal("expected non-nil")
 	}
-	if info.CycleTxBytes != 550_000 {
-		t.Errorf("expected CycleTx=550000, got %d", info.CycleTxBytes)
+	if info.CycleTxBytes != 560_000 {
+		t.Errorf("expected CycleTx=560000, got %d", info.CycleTxBytes)
 	}
-	if info.CycleRxBytes != 530_000 {
-		t.Errorf("expected CycleRx=530000, got %d", info.CycleRxBytes)
+	if info.CycleRxBytes != 540_000 {
+		t.Errorf("expected CycleRx=540000, got %d", info.CycleRxBytes)
 	}
 }
 
-// TestCounterResetZero verifies that a counter dropping to zero (e.g. NIC
-// driver re-init) does not create a spike: delta should be 0.
-func TestCounterResetZero(t *testing.T) {
+func TestCounterTransientZeroRebound(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1}}`)
 	m := NewVPSTrafficManager(dir)
@@ -174,9 +175,89 @@ func TestCounterResetZero(t *testing.T) {
 	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 700_000, 800_000}}, true)
 
 	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 0, 0}}, true)
-	// counter dropped to 0 → delta must be 0, not the old total
 	if info.CycleTxBytes != 200_000 || info.CycleRxBytes != 200_000 {
 		t.Errorf("zero counter should not spike: ctx=%d crx=%d", info.CycleTxBytes, info.CycleRxBytes)
+	}
+	state := m.states["sys1"]
+	if state.LastNicTx["eth0"] != 700_000 || state.LastNicRx["eth0"] != 800_000 {
+		t.Fatalf("zero counter replaced trusted baseline: tx=%d rx=%d", state.LastNicTx["eth0"], state.LastNicRx["eth0"])
+	}
+
+	info = m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 700_010, 800_020}}, true)
+	if info.CycleTxBytes != 200_010 || info.CycleRxBytes != 200_020 {
+		t.Errorf("rebound should count only small growth: ctx=%d crx=%d", info.CycleTxBytes, info.CycleRxBytes)
+	}
+}
+
+func TestCounterTransientLowerRebound(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1}}`)
+	m := NewVPSTrafficManager(dir)
+
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 900_000, 1_200_000}}, true)
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 300_000, 400_000}}, true)
+	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 900_030, 1_200_040}}, true)
+
+	if info.CycleTxBytes != 30 || info.CycleRxBytes != 40 {
+		t.Errorf("lower counter rebound should count only growth: ctx=%d crx=%d", info.CycleTxBytes, info.CycleRxBytes)
+	}
+}
+
+func TestCounterConfirmedReset(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1}}`)
+	m := NewVPSTrafficManager(dir)
+
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 1_000_000, 2_000_000}}, true)
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 50_000, 80_000}}, true)
+	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 60_000, 100_000}}, true)
+
+	if info.CycleTxBytes != 60_000 || info.CycleRxBytes != 100_000 {
+		t.Errorf("confirmed reset should count new counters once: ctx=%d crx=%d", info.CycleTxBytes, info.CycleRxBytes)
+	}
+}
+
+func TestCounterFallbackRealtimeThenPersistent(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1}}`)
+	m := NewVPSTrafficManager(dir)
+	m.flushInterval = time.Hour
+
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 700_000, 800_000}}, true)
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 0, 0}}, false)
+	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 700_010, 800_020}}, true)
+
+	if info.CycleTxBytes != 10 || info.CycleRxBytes != 20 {
+		t.Errorf("persistent rebound after realtime zero should count only growth: ctx=%d crx=%d", info.CycleTxBytes, info.CycleRxBytes)
+	}
+	if m.dirty {
+		t.Error("persistent sample should flush fallback state")
+	}
+}
+
+func TestCounterFallbackStateReload(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("VPS_TRAFFIC_CONFIG", `{"default":{"resetDay":1}}`)
+	m := NewVPSTrafficManager(dir)
+
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 900_000, 1_200_000}}, true)
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 300_000, 400_000}}, true)
+
+	reloaded := NewVPSTrafficManager(dir)
+	state := reloaded.states["sys1"]
+	if state.LastNicTx["eth0"] != 900_000 || state.LastNicRx["eth0"] != 1_200_000 {
+		t.Fatalf("reload lost trusted baseline: tx=%d rx=%d", state.LastNicTx["eth0"], state.LastNicRx["eth0"])
+	}
+	if state.PendingTx["eth0"] != 300_000 || state.PendingRx["eth0"] != 400_000 {
+		t.Fatalf("reload lost pending fallback: tx=%d rx=%d", state.PendingTx["eth0"], state.PendingRx["eth0"])
+	}
+
+	info := reloaded.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 900_030, 1_200_040}}, true)
+	if info.CycleTxBytes != 30 || info.CycleRxBytes != 40 {
+		t.Errorf("rebound after reload should count only growth: ctx=%d crx=%d", info.CycleTxBytes, info.CycleRxBytes)
+	}
+	if len(reloaded.states["sys1"].PendingTx) != 0 || len(reloaded.states["sys1"].PendingRx) != 0 {
+		t.Error("successful rebound should clear pending fallback state")
 	}
 }
 
@@ -350,14 +431,15 @@ func TestSingleNicReset(t *testing.T) {
 	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 1_000_000, 2_000_000}}, true)
 	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 1_200_000, 2_400_000}}, true)
 
-	// eth0 reboots, counter goes to 10_000
-	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 10_000, 20_000}}, true)
-	// delta1: tx=200k, rx=400k.  delta2 (reset): tx=10k, rx=20k
-	if info.CycleTxBytes != 210_000 {
-		t.Errorf("single NIC reset CycleTx: want 210000, got %d", info.CycleTxBytes)
+	// eth0 reboots; the second lower sample confirms the reset.
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 10_000, 20_000}}, true)
+	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{"eth0": {0, 0, 15_000, 30_000}}, true)
+	// delta1: tx=200k, rx=400k.  confirmed reset: tx=15k, rx=30k
+	if info.CycleTxBytes != 215_000 {
+		t.Errorf("single NIC reset CycleTx: want 215000, got %d", info.CycleTxBytes)
 	}
-	if info.CycleRxBytes != 420_000 {
-		t.Errorf("single NIC reset CycleRx: want 420000, got %d", info.CycleRxBytes)
+	if info.CycleRxBytes != 430_000 {
+		t.Errorf("single NIC reset CycleRx: want 430000, got %d", info.CycleRxBytes)
 	}
 }
 
@@ -372,17 +454,21 @@ func TestMultiNicOneReset(t *testing.T) {
 		"eth1": {0, 0, 500_000, 600_000},
 	}, true)
 
-	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{
+	m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{
 		"eth0": {0, 0, 1_100_000, 2_200_000}, // normal growth +100k tx, +200k rx
-		"eth1": {0, 0, 5_000, 8_000},         // reset: delta = 5k tx, 8k rx
+		"eth1": {0, 0, 5_000, 8_000},         // possible reset: held pending
 	}, true)
-	// eth0: tx delta=100k, rx delta=200k
-	// eth1: tx delta=5k (reset), rx delta=8k (reset)
-	if info.CycleTxBytes != 105_000 {
-		t.Errorf("multi NIC one reset CycleTx: want 105000, got %d", info.CycleTxBytes)
+	info := m.DeriveTraffic("sys1", "n", nil, map[string][4]uint64{
+		"eth0": {0, 0, 1_110_000, 2_220_000}, // normal growth +10k tx, +20k rx
+		"eth1": {0, 0, 7_000, 11_000},        // confirms reset
+	}, true)
+	// eth0: tx delta=110k, rx delta=220k
+	// eth1: tx delta=7k (reset), rx delta=11k (reset)
+	if info.CycleTxBytes != 117_000 {
+		t.Errorf("multi NIC one reset CycleTx: want 117000, got %d", info.CycleTxBytes)
 	}
-	if info.CycleRxBytes != 208_000 {
-		t.Errorf("multi NIC one reset CycleRx: want 208000, got %d", info.CycleRxBytes)
+	if info.CycleRxBytes != 231_000 {
+		t.Errorf("multi NIC one reset CycleRx: want 231000, got %d", info.CycleRxBytes)
 	}
 }
 

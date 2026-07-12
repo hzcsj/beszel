@@ -37,6 +37,8 @@ type VPSTrafficState struct {
 	SystemName string            `json:"systemName"`
 	LastNicRx  map[string]uint64 `json:"lastNicRx,omitempty"`
 	LastNicTx  map[string]uint64 `json:"lastNicTx,omitempty"`
+	PendingRx  map[string]uint64 `json:"pendingNicRx,omitempty"`
+	PendingTx  map[string]uint64 `json:"pendingNicTx,omitempty"`
 	CycleRx    uint64            `json:"cycleRx"`
 	CycleTx    uint64            `json:"cycleTx"`
 	TotalRx    uint64            `json:"totalRx"`
@@ -195,6 +197,25 @@ func mergeNodeConfig(base, override *VPSTrafficNodeConfig) {
 	}
 }
 
+// deriveCounterDelta keeps the last trusted counter across transient zero or
+// lower samples. A lower counter is accepted as a real reset only after a
+// subsequent lower-than-trusted sample grows from the pending value. This
+// prevents the original lifetime counter from being counted again on rebound.
+func deriveCounterDelta(current, trusted, pending uint64, hasPending bool) (delta, nextTrusted, nextPending uint64, keepPending bool) {
+	if current >= trusted {
+		return current - trusted, current, 0, false
+	}
+	if current == 0 {
+		return 0, trusted, 0, true
+	}
+	if !hasPending || current <= pending {
+		return 0, trusted, current, true
+	}
+	// The counter stayed below the trusted lifetime value and increased from
+	// the pending sample, confirming a real reset. Count the new counter once.
+	return current, current, 0, false
+}
+
 // DeriveTraffic computes VPSTrafficInfo from stats.ni and persists state.
 // dbTraffic is the per-system DB-level config (highest priority); nil if not set.
 // isPersistent indicates this is the normal 60-second database write; always flushes dirty state.
@@ -234,38 +255,46 @@ func (m *VPSTrafficManager) DeriveTraffic(systemID, systemName string, dbTraffic
 	state.SystemName = systemName
 
 	// Per-NIC delta computation:
-	//  - known NIC, counter grew      → normal delta
-	//  - known NIC, counter decreased  → counter reset; use current value if > 0
-	//  - new NIC (not in LastNicRx)    → initialize baseline only, delta = 0
+	//  - known NIC, counter grew       → normal delta
+	//  - known NIC, counter is 0/lower → preserve trusted baseline and wait
+	//  - lower counter then grows      → confirmed reset; count new counter once
+	//  - lower counter then rebounds   → count only growth above trusted baseline
+	//  - new NIC                       → initialize baseline only, delta = 0
 	//  - disappeared NIC               → ignored, no negative compensation
 	var deltaRx, deltaTx uint64
-	if state.LastNicRx != nil {
-		for name, v := range ni {
-			currTx, currRx := v[2], v[3]
-			if prevRx, ok := state.LastNicRx[name]; ok {
-				if currRx >= prevRx {
-					deltaRx += currRx - prevRx
-				} else if currRx > 0 {
-					deltaRx += currRx
-				}
+	nextRx := make(map[string]uint64, len(ni))
+	nextTx := make(map[string]uint64, len(ni))
+	nextPendingRx := make(map[string]uint64)
+	nextPendingTx := make(map[string]uint64)
+	for name, v := range ni {
+		currTx, currRx := v[2], v[3]
+		if prevRx, ok := state.LastNicRx[name]; ok {
+			pending, hasPending := state.PendingRx[name]
+			delta, trusted, pendingValue, keepPending := deriveCounterDelta(currRx, prevRx, pending, hasPending)
+			deltaRx += delta
+			nextRx[name] = trusted
+			if keepPending {
+				nextPendingRx[name] = pendingValue
 			}
-			if prevTx, ok := state.LastNicTx[name]; ok {
-				if currTx >= prevTx {
-					deltaTx += currTx - prevTx
-				} else if currTx > 0 {
-					deltaTx += currTx
-				}
+		} else {
+			nextRx[name] = currRx
+		}
+		if prevTx, ok := state.LastNicTx[name]; ok {
+			pending, hasPending := state.PendingTx[name]
+			delta, trusted, pendingValue, keepPending := deriveCounterDelta(currTx, prevTx, pending, hasPending)
+			deltaTx += delta
+			nextTx[name] = trusted
+			if keepPending {
+				nextPendingTx[name] = pendingValue
 			}
+		} else {
+			nextTx[name] = currTx
 		}
 	}
-
-	// Update per-NIC baselines to current snapshot
-	state.LastNicRx = make(map[string]uint64, len(ni))
-	state.LastNicTx = make(map[string]uint64, len(ni))
-	for name, v := range ni {
-		state.LastNicTx[name] = v[2]
-		state.LastNicRx[name] = v[3]
-	}
+	state.LastNicRx = nextRx
+	state.LastNicTx = nextTx
+	state.PendingRx = nextPendingRx
+	state.PendingTx = nextPendingTx
 
 	// Historical totals always accumulate, even across billing cycles
 	state.TotalRx += deltaRx
